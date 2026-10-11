@@ -1,20 +1,22 @@
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
+import { useAppTheme } from '@/components/ThemeProvider';
 
 export default function TabLayout() {
+  const { theme, name } = useAppTheme();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#D7817D',
-        tabBarInactiveTintColor: '#AA9B97',
-        tabBarStyle: { backgroundColor: '#FFFFFF', borderTopColor: '#F1E7E2', height: 82, paddingTop: 8, paddingBottom: 18 },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
+        tabBarActiveTintColor: name === 'burgundy' ? '#EBC677' : theme.colors.rose,
+        tabBarInactiveTintColor: name === 'burgundy' ? theme.colors.white : theme.colors.muted,
+        tabBarStyle: { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border, height: 82, paddingTop: 8, paddingBottom: 18 },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Today',
+          title: 'Calendar',
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{

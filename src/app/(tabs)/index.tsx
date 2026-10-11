@@ -1,212 +1,73 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const COLORS = {
-  background: '#FFF9F5',
-  card: '#FFFFFF',
-  ink: '#3F3433',
-  muted: '#9B8B87',
-  blush: '#F7C9C6',
-  blushDeep: '#E98F8A',
-  peach: '#FBE3D3',
-  lilac: '#DDD5F1',
-  sage: '#D9E8D2',
-  line: '#EFE5E0',
-};
-
-type ViewMode = 'Month' | 'Countdown' | 'Cycle';
-
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const PERIOD_DAYS = new Set([1, 2, 3, 4, 5]);
-const FERTILE_DAYS = new Set([14, 15, 16, 17, 18, 19]);
-
-function MonthCalendar() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const today = now.getDate();
-  const title = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells = Array.from({ length: 42 }, (_, index) => {
-    const day = index - firstDay + 1;
-    return day > 0 && day <= daysInMonth ? day : null;
-  });
-
-  return (
-    <View style={styles.calendarCard}>
-      <View style={styles.monthHeader}>
-        <Pressable accessibilityLabel="Previous month" hitSlop={12}>
-          <Text style={styles.chevron}>‹</Text>
-        </Pressable>
-        <View style={styles.monthTitleWrap}>
-          <Text style={styles.monthTitle}>{title}</Text>
-          <Text style={styles.monthSubtitle}>cycle day 22</Text>
-        </View>
-        <Pressable accessibilityLabel="Next month" hitSlop={12}>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.weekRow}>
-        {WEEKDAYS.map((day, index) => (
-          <Text key={`${day}-${index}`} style={styles.weekday}>{day}</Text>
-        ))}
-      </View>
-      <View style={styles.daysGrid}>
-        {cells.map((day, index) => {
-          const period = day !== null && PERIOD_DAYS.has(day);
-          const fertile = day !== null && FERTILE_DAYS.has(day);
-          const isToday = day === today;
-          return (
-            <View key={index} style={styles.dayCell}>
-              {day ? (
-                <View style={[styles.dayBubble, period && styles.periodDay, fertile && styles.fertileDay, isToday && styles.todayDay]}>
-                  <Text style={[styles.dayText, (period || isToday) && styles.activeDayText]}>{day}</Text>
-                  {fertile && day === 17 ? <View style={styles.ovulationDot} /> : null}
-                </View>
-              ) : null}
-            </View>
-          );
-        })}
-      </View>
-
-      <View style={styles.legend}>
-        <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: COLORS.blush }]} /><Text style={styles.legendText}>Period</Text></View>
-        <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: COLORS.lilac }]} /><Text style={styles.legendText}>Fertile window</Text></View>
-        <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: COLORS.ink }]} /><Text style={styles.legendText}>Today</Text></View>
-      </View>
-    </View>
-  );
-}
-
-function CountdownView() {
-  return (
-    <View style={styles.focusCard}>
-      <View style={styles.countdownRing}>
-        <Text style={styles.countdownNumber}>6</Text>
-        <Text style={styles.countdownLabel}>days</Text>
-      </View>
-      <Text style={styles.focusTitle}>until your next period</Text>
-      <Text style={styles.focusCopy}>Expected around October 7. Your cycle can naturally shift a little.</Text>
-      <View style={styles.miniRow}>
-        <View style={[styles.miniCard, { backgroundColor: COLORS.peach }]}><Text style={styles.miniValue}>28</Text><Text style={styles.miniLabel}>avg. cycle</Text></View>
-        <View style={[styles.miniCard, { backgroundColor: '#F0ECF8' }]}><Text style={styles.miniValue}>12</Text><Text style={styles.miniLabel}>days to ovulation</Text></View>
-      </View>
-    </View>
-  );
-}
-
-function CycleView() {
-  return (
-    <View style={styles.focusCard}>
-      <View style={styles.phaseArt}><Text style={styles.phaseArtText}>☾</Text></View>
-      <Text style={styles.eyebrow}>YOU'RE IN YOUR</Text>
-      <Text style={styles.phaseTitle}>Luteal phase</Text>
-      <Text style={styles.focusCopy}>A softer, slower chapter. Energy may begin to turn inward as your body prepares for a new cycle.</Text>
-      <View style={styles.tipCard}><Text style={styles.tipIcon}>♡</Text><View style={styles.tipTextWrap}><Text style={styles.tipTitle}>A little care note</Text><Text style={styles.tipCopy}>Warm meals, extra rest, and gentle movement may feel especially good.</Text></View></View>
-    </View>
-  );
-}
+import { Botanical } from '@/components/Botanical';
+import { createGlobalStyles, type Theme } from '@/constants/Theme';
+import { useAppTheme } from '@/components/ThemeProvider';
+const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function HomeScreen() {
-  const [mode, setMode] = useState<ViewMode>('Month');
-  const { width } = useWindowDimensions();
-  const greeting = useMemo(() => (new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'), []);
-
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView contentContainerStyle={[styles.content, { maxWidth: Math.min(width, 720) }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View><Text style={styles.greeting}>{greeting}, lovely</Text><Text style={styles.heading}>Here’s your rhythm.</Text></View>
-          <Pressable accessibilityLabel="Open profile" style={styles.avatar}><Text style={styles.avatarText}>M</Text></Pressable>
+  const { theme, name, setName, styles: g } = useAppTheme();
+  const c = theme.colors;
+  const s = createStyles(theme);
+  const today = new Date();
+  const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selected, setSelected] = useState(today.getDate());
+  const [entry, setEntry] = useState<string | null>(null);
+  const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const count = Math.ceil((month.getDay() + days) / 7) * 7;
+  const changeMonth = (step: number) => { setMonth(new Date(month.getFullYear(), month.getMonth() + step, 1)); setSelected(1); };
+  const selectedDate = new Date(month.getFullYear(), month.getMonth(), selected);
+  return <SafeAreaView style={g.screen} edges={['top']}>
+    <ScrollView contentContainerStyle={g.content} showsVerticalScrollIndicator={false}>
+      <View style={s.header}>
+        <View style={s.leftFlowers}><Botanical /></View><View style={s.rightFlowers}><Botanical flipped /></View>
+        <View style={s.themePicker}>{(['petal', 'burgundy'] as const).map(option => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: name === option }} onPress={() => setName(option)} style={[s.themeOption, name === option && { borderColor: name === 'burgundy' ? '#EBC677' : c.rose }]}><Text style={{ color: name === 'burgundy' ? c.white : c.muted, fontSize: 11 }}>{option === 'petal' ? 'Soft Petal' : 'Burgundy Bloom'}</Text></Pressable>)}</View>
+        <Text style={[s.brand, name === 'burgundy' && { color: c.white }]}><Text style={{ color: c.rose }}>✿ </Text>petal</Text>
+        <Text style={[s.title, name === 'burgundy' && { color: c.white }]}>Your cycle</Text><Text style={[g.body, name === 'burgundy' && { color: '#EBC677' }]}>A little care, every day</Text>
+      </View>
+      <View style={[g.card, s.summary]}>
+        <View style={{ flex: 1 }}><Text style={s.summaryTitle}>Cycle day 12</Text><Text style={g.body}>Period expected in 16 days</Text><Text style={s.caption}>Sample cycle · estimates only</Text></View>
+        <View style={s.summaryFlower}><Botanical small /></View>
+      </View>
+      <View style={[g.card, s.calendar]}>
+        <View style={s.monthRow}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => changeMonth(-1)} style={s.arrow}><Text style={s.arrowText}>‹</Text></Pressable>
+          <Text style={s.month}>{month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => changeMonth(1)} style={s.arrow}><Text style={s.arrowText}>›</Text></Pressable>
         </View>
-
-        <View style={styles.segmented}>
-          {(['Month', 'Countdown', 'Cycle'] as ViewMode[]).map((item) => (
-            <Pressable key={item} onPress={() => setMode(item)} style={[styles.segment, mode === item && styles.segmentActive]}>
-              <Text style={[styles.segmentText, mode === item && styles.segmentTextActive]}>{item}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {mode === 'Month' ? <MonthCalendar /> : mode === 'Countdown' ? <CountdownView /> : <CycleView />}
-
-        <View style={styles.checkInHeader}><Text style={styles.sectionTitle}>Today’s check-in</Text><Text style={styles.sectionAction}>Edit</Text></View>
-        <View style={styles.checkInCard}>
-          <View style={styles.checkInIcon}><Text style={styles.checkInIconText}>✿</Text></View>
-          <View style={styles.checkInText}><Text style={styles.checkInTitle}>How are you feeling?</Text><Text style={styles.checkInCopy}>Log your mood, flow, and symptoms</Text></View>
-          <Text style={styles.chevronSmall}>›</Text>
-        </View>
-        <Text style={styles.disclaimer}>Predictions are estimates, not medical advice.</Text>
-      </ScrollView>
-    </SafeAreaView>
-  );
+        <View style={s.grid}>{weekdays.map(day => <Text key={day} style={s.weekday}>{day}</Text>)}</View>
+        <View style={s.grid}>{Array.from({ length: count }, (_, i) => {
+          const day = i - month.getDay() + 1;
+          if (day < 1 || day > days) return <View key={i} style={s.cell} />;
+          const period = day <= 5, fertile = day >= 12 && day <= 17;
+          return <View key={i} style={s.cell}><Pressable accessibilityRole="button" accessibilityLabel={new Date(month.getFullYear(), month.getMonth(), day).toDateString()} accessibilityState={{ selected: selected === day }} onPress={() => { setSelected(day); setEntry(null); }} style={[s.day, period && { backgroundColor: c.roseSoft }, fertile && { backgroundColor: c.sage }, selected === day && s.selected]}><Text style={[s.dayText, name === 'burgundy' && (period || fertile) && { color: c.white }]}>{day}</Text></Pressable></View>;
+        })}</View>
+        <View style={s.legend}><View style={s.legendItem}><View style={[s.dot, { backgroundColor: c.roseSoft }]} /><Text style={s.legendText}>Period</Text></View><View style={s.legendItem}><View style={[s.dot, { backgroundColor: c.sage }]} /><Text style={s.legendText}>Fertile estimate</Text></View></View>
+      </View>
+      <View style={[g.card, s.checkin]}>
+        <Text style={s.date}>{selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
+        <Text style={g.body}>How are you feeling?</Text>
+        <View style={s.actions}>{[['☼', 'Mood'], ['♡', 'Symptoms'], ['≡', 'Notes']].map(([icon, label]) => <Pressable key={label} accessibilityRole="button" accessibilityState={{ selected: entry === label }} onPress={() => setEntry(label)} style={[s.action, entry === label && { backgroundColor: c.roseWash, borderColor: c.rose }]}><Text style={s.actionIcon}>{icon}</Text><Text style={s.actionText}>{label}</Text></Pressable>)}</View>
+        {entry && <Text accessibilityLiveRegion="polite" style={s.feedback}>{entry} selected. Journal logging is coming soon.</Text>}
+        <Pressable accessibilityRole="button" onPress={() => setEntry('Daily check-in')} style={g.button}><Text style={g.buttonText}>＋ Log today</Text></Pressable>
+      </View>
+      <Text style={s.disclaimer}>Sample data. Predictions are estimates, not medical advice.</Text>
+    </ScrollView>
+  </SafeAreaView>;
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
-  content: { width: '100%', alignSelf: 'center', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 32 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  greeting: { color: COLORS.muted, fontSize: 13, fontWeight: '600', letterSpacing: 0.2 },
-  heading: { color: COLORS.ink, fontSize: 28, fontWeight: '700', letterSpacing: -0.8, marginTop: 4 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.peach, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.card },
-  avatarText: { color: '#A66D5C', fontWeight: '700', fontSize: 16 },
-  segmented: { backgroundColor: '#F3EAE5', borderRadius: 16, padding: 4, flexDirection: 'row', marginBottom: 16 },
-  segment: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 12 },
-  segmentActive: { backgroundColor: COLORS.card, shadowColor: '#7D5F55', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
-  segmentText: { color: COLORS.muted, fontWeight: '600', fontSize: 13 },
-  segmentTextActive: { color: COLORS.ink },
-  calendarCard: { backgroundColor: COLORS.card, borderRadius: 26, paddingHorizontal: 16, paddingVertical: 18, shadowColor: '#8B6E64', shadowOpacity: 0.08, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
-  monthHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4, marginBottom: 18 },
-  monthTitleWrap: { alignItems: 'center' },
-  monthTitle: { color: COLORS.ink, fontSize: 18, fontWeight: '700' },
-  monthSubtitle: { color: COLORS.blushDeep, fontSize: 11, marginTop: 3, fontWeight: '600' },
-  chevron: { color: COLORS.muted, fontSize: 32, fontWeight: '300', lineHeight: 32 },
-  weekRow: { flexDirection: 'row', marginBottom: 7 },
-  weekday: { width: '14.285%', textAlign: 'center', color: COLORS.muted, fontSize: 11, fontWeight: '700' },
-  daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { width: '14.285%', height: 43, alignItems: 'center', justifyContent: 'center' },
-  dayBubble: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  periodDay: { backgroundColor: COLORS.blush },
-  fertileDay: { backgroundColor: '#EEEAF8' },
-  todayDay: { backgroundColor: COLORS.ink, borderWidth: 3, borderColor: COLORS.peach },
-  dayText: { color: '#655957', fontSize: 13, fontWeight: '500' },
-  activeDayText: { color: COLORS.card, fontWeight: '700' },
-  ovulationDot: { position: 'absolute', bottom: 3, width: 4, height: 4, borderRadius: 2, backgroundColor: '#9D8AC5' },
-  legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 14, borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 15, marginTop: 10 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 10, color: COLORS.muted, fontWeight: '500' },
-  focusCard: { minHeight: 410, backgroundColor: COLORS.card, borderRadius: 26, padding: 26, alignItems: 'center', justifyContent: 'center', shadowColor: '#8B6E64', shadowOpacity: 0.08, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
-  countdownRing: { width: 138, height: 138, borderRadius: 69, backgroundColor: '#FFF5EF', borderWidth: 10, borderColor: COLORS.blush, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  countdownNumber: { color: COLORS.ink, fontSize: 48, fontWeight: '700', lineHeight: 52 },
-  countdownLabel: { color: COLORS.muted, fontSize: 13 },
-  focusTitle: { color: COLORS.ink, fontSize: 21, fontWeight: '700', marginBottom: 9 },
-  focusCopy: { color: COLORS.muted, fontSize: 13, lineHeight: 20, textAlign: 'center', maxWidth: 310 },
-  miniRow: { flexDirection: 'row', gap: 10, marginTop: 24, width: '100%' },
-  miniCard: { flex: 1, paddingVertical: 14, borderRadius: 16, alignItems: 'center' },
-  miniValue: { color: COLORS.ink, fontSize: 21, fontWeight: '700' },
-  miniLabel: { color: COLORS.muted, fontSize: 10, marginTop: 3 },
-  phaseArt: { width: 92, height: 92, borderRadius: 46, backgroundColor: '#EEEAF8', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  phaseArtText: { fontSize: 45, color: '#8E7EB3' },
-  eyebrow: { color: '#9D8AC5', fontWeight: '700', fontSize: 10, letterSpacing: 1.5 },
-  phaseTitle: { color: COLORS.ink, fontSize: 28, fontWeight: '700', marginTop: 5, marginBottom: 10 },
-  tipCard: { flexDirection: 'row', backgroundColor: '#F5F2FA', borderRadius: 17, padding: 14, marginTop: 22, width: '100%', alignItems: 'center' },
-  tipIcon: { fontSize: 24, color: '#9D8AC5', marginRight: 12 },
-  tipTextWrap: { flex: 1 },
-  tipTitle: { color: COLORS.ink, fontSize: 12, fontWeight: '700', marginBottom: 3 },
-  tipCopy: { color: COLORS.muted, fontSize: 11, lineHeight: 16 },
-  checkInHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 25, marginBottom: 11, paddingHorizontal: 3 },
-  sectionTitle: { color: COLORS.ink, fontSize: 17, fontWeight: '700' },
-  sectionAction: { color: COLORS.blushDeep, fontSize: 12, fontWeight: '700' },
-  checkInCard: { backgroundColor: COLORS.card, padding: 15, borderRadius: 19, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#F4EBE6' },
-  checkInIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.sage, alignItems: 'center', justifyContent: 'center' },
-  checkInIconText: { color: '#6F8A65', fontSize: 20 },
-  checkInText: { flex: 1, marginLeft: 12 },
-  checkInTitle: { color: COLORS.ink, fontWeight: '700', fontSize: 13 },
-  checkInCopy: { color: COLORS.muted, fontSize: 11, marginTop: 3 },
-  chevronSmall: { color: COLORS.muted, fontSize: 25 },
-  disclaimer: { color: '#B1A4A0', fontSize: 10, textAlign: 'center', marginTop: 18 },
+const createStyles = (theme: Theme) => {
+const c = theme.colors;
+const g = createGlobalStyles(theme);
+return StyleSheet.create({
+  themePicker: { flexDirection: 'row', gap: 8, marginBottom: 12, zIndex: 1 }, themeOption: { paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 20 },
+  header: { alignItems: 'center', paddingTop: 8, paddingBottom: 26, overflow: 'hidden' },
+  leftFlowers: { position: 'absolute', left: -22, top: 8, transform: [{ rotate: '-15deg' }] }, rightFlowers: { position: 'absolute', right: -28, top: 22, transform: [{ rotate: '15deg' }] },
+  brand: { fontFamily: theme.fonts.heading, fontSize: 34, color: c.text, marginBottom: 14 }, title: { fontFamily: theme.fonts.heading, fontSize: 58, color: c.text, lineHeight: 66 },
+  summary: { backgroundColor: c.roseWash, flexDirection: 'row', alignItems: 'center', paddingVertical: 24, overflow: 'hidden', marginBottom: 16 }, summaryTitle: { ...g.heading, fontSize: 34, marginBottom: 4 }, summaryFlower: { width: 48, height: 90, marginRight: -8 }, caption: { color: c.muted, fontSize: 11, marginTop: 8 },
+  calendar: { paddingHorizontal: 14, paddingVertical: 16 }, monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }, month: { ...g.heading, fontSize: 30 }, arrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, arrowText: { color: c.text, fontSize: 38, lineHeight: 42 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' }, weekday: { width: '14.2857%', textAlign: 'center', color: c.muted, fontSize: 12, paddingBottom: 12 }, cell: { width: '14.2857%', height: 49, alignItems: 'center', justifyContent: 'center' }, day: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }, dayText: { color: c.text, fontSize: 17 }, selected: { borderWidth: 1.5, borderColor: c.text },
+  legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 18, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 16, marginTop: 16 }, legendItem: { flexDirection: 'row', alignItems: 'center', gap: 7 }, dot: { width: 13, height: 13, borderRadius: 7 }, legendText: { color: c.muted, fontSize: 12 },
+  checkin: { marginTop: 16 }, date: { ...g.heading, fontSize: 30, marginBottom: 4 }, actions: { flexDirection: 'row', gap: 8, marginVertical: 18 }, action: { flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 16, paddingVertical: 12, alignItems: 'center' }, actionIcon: { color: c.rose, fontSize: 32, height: 40 }, actionText: { color: c.text, fontSize: 13 }, feedback: { ...g.body, fontSize: 12, marginBottom: 12 }, disclaimer: { color: c.muted, fontSize: 11, textAlign: 'center', marginTop: 18 },
 });
+};
