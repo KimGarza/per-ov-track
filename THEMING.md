@@ -30,3 +30,24 @@ Calendar layout integrates compact cycle context beneath the centered month head
 Update your cycle data → Calendar → Menstrual/Ovulation → tap start and end → ✓ Save. The editor stays open to mark the other range. Cross-month selections preserve the start date; Jump to month supports year/month selection. Single days can be saved after the first tap. Clear dates removes markings only, preserving check-ins. Tapping a date or a check-in opens its day editor.
 
 Run `npm test` for date/range/restore regression tests, including DST, leap days, cross-year ranges and overlapping corrections.
+
+
+## Responsive phone layout
+
+Home measures the available space inside the safe area and tab navigator, then sizes the grid from the actual month row count. It targets about 70% of the available height for the calendar, with a compact check-in below. Shared `calendar` sizing tokens control the limits; the minimum avoids making dates unreadably small. Short screens keep scrolling available, with a compact check-in rather than hiding editing features. Large text settings and landscape can require scrolling.
+
+Crimson Rhythm stays on one line with width-dependent type and native font fitting. The inline Update cycle data button replaces the tall standalone calendar button. Check-in uses a compact date/prompt/Log today header; mood/symptom/note shortcuts appear when there is enough height. All fields remain available in the popup at every size.
+
+The tab bar uses a shared base height plus the device bottom safe-area inset. Native top insets and the measured content viewport account for notches, home indicators and Android navigation bars. Validate both five- and six-week months when changing sizing tokens.
+
+## Christian features
+
+Gothic Sanctuary is a third independent palette. Its `decoration: 'celestial'` flag enables the moon, halo, stars and moth artwork through shared decoration components. The verse reader uses a simple Bible book icon tinted by the active palette.
+
+The header shows a daily KJV Scripture reference. Tapping it or the Bible icon opens a spring/fade reader; reduced-motion settings skip the animation. The reference renders after client hydration so a server in another timezone cannot choose the phone's verse. Holiday markers are preview-only fixed month/day examples, as requested; moveable Easter-related dates are deliberately not calculated. Holiday day popups display the related verse.
+
+Insights now uses real daily check-ins rather than fabricated cycle statistics. It summarizes repeated mood labels over the last 30 days, offers five prepared Scripture reflections per topic with swipe/Previous/Next pagination, and stores daily goals, noticed patterns and a chosen next step locally alongside cycle data. Guidance explanations are commentary, separate from Scripture quotations.
+
+The custom question UI has a server connection ready for AI assistance. It requires `EXPO_PUBLIC_GUIDANCE_API_URL` and the server-only OpenAI key; without them, prepared topics continue to work and the app clearly says personal guidance is not available yet. See `server/README.md` for setup. No key is embedded, no service is deployed, and no live AI call was made in this change.
+
+Verse source: public-domain KJV text, https://www.gutenberg.org/ebooks/10. The verse catalog is bundled and used to bind AI-selected IDs to actual Scripture. Placeholder calendar dates are design data rather than a denominational liturgical calendar.

@@ -5,7 +5,8 @@ export const designTokens = {
   fonts: { heading: 'CormorantGaramond', body: Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }) },
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
   radius: { xs: 4, sm: 12, calendarDay: 10, card: 26, pill: 100 },
-  layout: { maxWidth: 720, gutter: 16, touchTarget: 44 },
+  layout: { maxWidth: 720, gutter: 16, touchTarget: 44, tabBarHeight: 68 },
+  calendar: { minRowHeight: 35, maxRowHeight: 80, defaultRowHeight: 60, chromeHeight: 144, headerHeight: 52, checkinHeight: 120 },
 };
 export type ThemeColors = {
   background: string; surface: string; calendarSurface: string; text: string; muted: string;
@@ -17,9 +18,9 @@ export type ThemeColors = {
   border: string; backgroundBorder: string; white: string; shadow: string;
   botanicalBorder: string; botanicalCenter: string;
 };
-export type Theme = typeof designTokens & { colors: ThemeColors; statusBar: 'light' | 'dark' };
-function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar']): Theme {
-  return { ...designTokens, colors, statusBar };
+export type Theme = typeof designTokens & { colors: ThemeColors; statusBar: 'light' | 'dark'; decoration: 'none' | 'celestial' };
+function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar'], decoration: Theme['decoration'] = 'none'): Theme {
+  return { ...designTokens, colors, statusBar, decoration };
 }
 export const themes = {
   petal: defineTheme({
@@ -40,10 +41,20 @@ export const themes = {
     border: '#DDC8AC', backgroundBorder: '#795640', white: '#FFF3DC', shadow: '#21080D',
     botanicalBorder: '#DDC8AC', botanicalCenter: '#EBC677',
   }, 'light'),
+  sanctuary: defineTheme({
+    background: '#151019', surface: '#EAE2DC', calendarSurface: '#F5EFEB', text: '#291924', muted: '#57404F',
+    calendarPeriod: '#CAA0B0', calendarFertile: '#C5CABA', calendarText: '#291924',
+    today: '#7C6237', todayPeriod: '#713246', todayFertile: '#46523B', overlay: '#0B080DD9',
+    onBackground: '#F6F0EA', mutedOnBackground: '#C9BECD', accentOnBackground: '#ECE5D7',
+    rose: '#66384E', roseSoft: '#C6A0B2', roseWash: '#E6D9E0', sage: '#C5CABA', olive: '#777E6E',
+    onPeriod: '#291924', onFertile: '#291924', mutedOnFertile: '#57404F',
+    border: '#CFC0C8', backgroundBorder: '#463349', white: '#F6F0EA', shadow: '#080609',
+    botanicalBorder: '#CFC0C8', botanicalCenter: '#DBCFB5',
+  }, 'light', 'celestial'),
 };
 export type ThemeName = keyof typeof themes;
 // Adding a theme requires a palette above and a label here; selectors derive their options.
-export const themeLabels: Record<ThemeName, string> = { petal: 'Soft Petal', burgundy: 'Burgundy Bloom' };
+export const themeLabels: Record<ThemeName, string> = { petal: 'Soft Petal', burgundy: 'Burgundy Bloom', sanctuary: 'Gothic Sanctuary' };
 export const themeOptions = (Object.keys(themes) as ThemeName[]).map(id => ({ id, label: themeLabels[id] }));
 export const defaultThemeName: ThemeName = 'petal';
 export const createGlobalStyles = (theme: Theme) => StyleSheet.create({

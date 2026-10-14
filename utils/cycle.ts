@@ -1,9 +1,11 @@
 export type CycleKind = 'menstrual' | 'ovulation';
 export type JournalEntry = { mood: string; symptoms: string; notes: string };
+export type ReflectionEntry = { pattern: string; action: string; completed: string[] };
 export type CycleData = {
   version: 1;
   days: Record<string, CycleKind>;
   journal: Record<string, JournalEntry>;
+  reflections?: Record<string, ReflectionEntry>;
 };
 export const emptyCycleData = (): CycleData => ({ version: 1, days: {}, journal: {} });
 
@@ -67,6 +69,13 @@ export function readCycleData(value: string): CycleData {
   for (const [day, entry] of Object.entries(data.journal)) {
     parseDate(day);
     if (!entry || !['mood', 'symptoms', 'notes'].every(field => typeof entry[field as keyof JournalEntry] === 'string')) throw new Error('Invalid saved journal');
+  }
+  if (data.reflections) {
+    if (typeof data.reflections !== 'object' || Array.isArray(data.reflections)) throw new Error('Invalid saved reflection');
+    for (const [day, entry] of Object.entries(data.reflections)) {
+      parseDate(day);
+      if (!entry || typeof entry.pattern !== 'string' || typeof entry.action !== 'string' || !Array.isArray(entry.completed) || !entry.completed.every(id => typeof id === 'string')) throw new Error('Invalid saved reflection');
+    }
   }
   return data;
 }

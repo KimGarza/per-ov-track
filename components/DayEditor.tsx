@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { holidayFor, verses } from '@/utils/faith';
 import { parseDate, type CycleKind, type JournalEntry } from '@/utils/cycle';
 import { useAppTheme } from './ThemeProvider';
 import { useCycleData } from './CycleDataProvider';
@@ -8,6 +9,7 @@ import { EditSheet } from './EditSheet';
 export function DayEditor({ day, initialField, onClose }: { day: string; initialField?: keyof JournalEntry; onClose: () => void }) {
   const { theme, styles: g } = useAppTheme();
   const { data, saveDay, ready } = useCycleData();
+  const holiday = holidayFor(day);
   const [entry, setEntry] = useState<JournalEntry>(() => data.journal[day] ?? { mood: '', symptoms: '', notes: '' });
   const [kind, setKind] = useState<CycleKind | null>(data.days[day] ?? null);
   const [busy, setBusy] = useState(false);
@@ -22,6 +24,11 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
   };
   return <EditSheet title={parseDate(day).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} onClose={onClose} busy={busy} footer={<Pressable accessibilityRole="button" disabled={busy || !ready} accessibilityState={{ disabled: busy || !ready }} onPress={() => { void save(); }} style={[g.button, (busy || !ready) && g.disabled]}><Text style={g.buttonText}>{busy ? 'Saving…' : '✓ Save check-in'}</Text></Pressable>}>
     <View style={{ gap: theme.spacing.md }}>
+      {holiday && <View style={[g.card, { padding: theme.spacing.sm, backgroundColor: theme.colors.roseWash }]}>
+        <Text style={{ color: theme.colors.text, fontWeight: '600' }}>✝ {holiday.name}</Text>
+        <Text style={g.body}>{verses[holiday.verseId].reference} · KJV</Text>
+        <Text style={g.body}>{verses[holiday.verseId].text}</Text>
+      </View>}
       <Text style={g.body}>How are you feeling?</Text>
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
         {([{ value: 'menstrual', label: 'Menstrual', color: theme.colors.calendarPeriod }, { value: 'ovulation', label: 'Ovulation', color: theme.colors.calendarFertile }, { value: null, label: 'Neither', color: theme.colors.roseWash }] as const).map(option => <Pressable key={option.label} accessibilityRole="button" accessibilityState={{ selected: kind === option.value }} disabled={busy} onPress={() => setKind(option.value)} style={[g.outlineButton, { flexGrow: 1, backgroundColor: kind === option.value ? option.color : theme.colors.surface, borderColor: kind === option.value ? theme.colors.text : theme.colors.border }]}><Text style={{ color: theme.colors.text }}>{option.label}</Text></Pressable>)}

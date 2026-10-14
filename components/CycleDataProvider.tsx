@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
-import { applyRange, dateKey, emptyCycleData, parseDate, readCycleData, type CycleData, type CycleKind, type JournalEntry } from '@/utils/cycle';
+import { applyRange, dateKey, emptyCycleData, parseDate, readCycleData, type CycleData, type CycleKind, type JournalEntry, type ReflectionEntry } from '@/utils/cycle';
 
 const storageKey = 'crimson-rhythm:cycle-data:v1';
 function useCycleState() {
@@ -39,7 +39,11 @@ function useCycleState() {
     const key = dateKey(parseDate(day));
     return commit(previous => ({ ...applyRange(previous, kind, key, key), journal: { ...previous.journal, [key]: entry } }));
   }, [commit]);
-  return { data, ready, error, retry: load, saveRange, saveJournal, saveDay };
+  const saveReflection = useCallback((day: string, entry: ReflectionEntry) => {
+    const key = dateKey(parseDate(day));
+    return commit(previous => ({ ...previous, reflections: { ...previous.reflections, [key]: entry } }));
+  }, [commit]);
+  return { data, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
 const CycleContext = createContext<ReturnType<typeof useCycleState> | null>(null);
 export function CycleDataProvider({ children }: PropsWithChildren) {
