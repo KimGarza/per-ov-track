@@ -2,7 +2,7 @@
 
 The Themes control at the top right of Calendar lists the registered palettes. Selecting an option updates the whole app immediately and keeps the dropdown open. Tap outside it (or use Android Back) to dismiss. Selection lasts for the current app session.
 
-`constants/Theme.ts` contains shared layout, typography, spacing, radii, reusable styles, and independent complete palettes. Neither palette inherits colors from the other. Colors express their context: `text`/`muted` are for cards, `onBackground`/`mutedOnBackground` for the page, and `onPeriod`/`onFertile` for calendar highlights. Always pair a background with its matching foreground tokens.
+`constants/Theme.ts` contains shared layout, typography, spacing, radii, reusable styles, and independent complete palettes. Neither palette inherits colors from the other. Colors express their context: `text`/`muted` are for cards, `onBackground`/`mutedOnBackground` for the page, and `onPeriod`/`onFertile` for calendar highlights. `calendarSurface`, `calendarPeriod`, `calendarFertile`, and `calendarText` give the calendar its own readable surface and highlights without changing the other semantic surfaces. Date highlights use the shared `radius.calendarDay` token; legend markers use `radius.xs`. Always pair a background with its matching foreground tokens.
 
 ```tsx
 const { theme, styles } = useAppTheme();
@@ -15,3 +15,5 @@ Add a complete palette to `themes` and its display name to `themeLabels`. TypeSc
 Calendar highlights and cycle statistics are demonstration data; check-in buttons currently show a placeholder message rather than save health records. Botanical details are lightweight stylized illustrations.
 
 The bundled Cormorant Garamond font uses the SIL Open Font License (see `assets/fonts/CormorantGaramond-LICENSE.txt`).
+
+Calendar layout integrates compact cycle context beneath the centered month heading, above the date grid. The check-in card follows immediately.
