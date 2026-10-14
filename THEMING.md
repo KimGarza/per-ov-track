@@ -12,8 +12,21 @@ const { theme, styles } = useAppTheme();
 
 Add a complete palette to `themes` and its display name to `themeLabels`. TypeScript checks the color contract and labels; `ThemeName` and `themeOptions` are derived automatically. No selector or screen changes are required. Avoid hardcoded colors, importing a fixed palette, and branching on theme names in UI. Shared component geometry belongs in `designTokens` or `createGlobalStyles`.
 
-Calendar highlights and cycle statistics are demonstration data; check-in buttons currently show a placeholder message rather than save health records. Botanical details are lightweight stylized illustrations.
+The home calendar now uses locally saved menstrual/ovulation markings and journal entries, with no fabricated monthly highlights. Insights still shows demonstration statistics. Botanical details are lightweight stylized illustrations.
 
 The bundled Cormorant Garamond font uses the SIL Open Font License (see `assets/fonts/CormorantGaramond-LICENSE.txt`).
 
 Calendar layout integrates compact cycle context beneath the centered month heading, above the date grid. The check-in card follows immediately.
+
+
+## Calendar editing
+
+`utils/cycle.ts` owns local date keys, inclusive date ranges, range selection, marking replacement/clearing, data validation, and cycle-day calculation. Dates are stored by local YYYY-MM-DD (not UTC timestamps); range math handles DST and month/year boundaries.
+
+`CycleDataProvider` loads and validates saved records, serializes writes, and commits visible state only after a successful save. `DayEditor` saves check-ins and day markings together. Persistence uses Expo-compatible AsyncStorage on device (localStorage on web). Storage is local and unencrypted, with no cloud synchronization; clearing app/browser storage removes these records.
+
+`CalendarGrid` is shared by home and the range editor. Today alone has a sun/drop/flower marker and the matching darker border, independently of the selected day. `today`, `todayPeriod`, `todayFertile`, and `overlay` belong to each palette; inputs and disabled controls use global styles.
+
+Update your cycle data → Calendar → Menstrual/Ovulation → tap start and end → ✓ Save. The editor stays open to mark the other range. Cross-month selections preserve the start date; Jump to month supports year/month selection. Single days can be saved after the first tap. Clear dates removes markings only, preserving check-ins. Tapping a date or a check-in opens its day editor.
+
+Run `npm test` for date/range/restore regression tests, including DST, leap days, cross-year ranges and overlapping corrections.

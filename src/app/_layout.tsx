@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Stack, DefaultTheme, ThemeProvider } from 'expo-router';
+import { CycleDataProvider } from '@/components/CycleDataProvider';
 import { AppThemeProvider, useAppTheme } from '@/components/ThemeProvider';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -42,7 +43,7 @@ export default function RootLayout() {
     return null;
   }
 
-  return <AppThemeProvider><RootLayoutNav /></AppThemeProvider>;
+  return <AppThemeProvider><CycleDataProvider><RootLayoutNav /></CycleDataProvider></AppThemeProvider>;
 }
 
 function RootLayoutNav() {
