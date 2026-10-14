@@ -3,14 +3,14 @@ import { Tabs } from 'expo-router';
 import { useAppTheme } from '@/components/ThemeProvider';
 
 export default function TabLayout() {
-  const { theme, name } = useAppTheme();
+  const { theme } = useAppTheme();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: name === 'burgundy' ? '#EBC677' : theme.colors.rose,
-        tabBarInactiveTintColor: name === 'burgundy' ? theme.colors.white : theme.colors.muted,
-        tabBarStyle: { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border, height: 82, paddingTop: 8, paddingBottom: 18 },
+        tabBarActiveTintColor: theme.colors.accentOnBackground,
+        tabBarInactiveTintColor: theme.colors.mutedOnBackground,
+        tabBarStyle: { backgroundColor: theme.colors.background, borderTopColor: theme.colors.backgroundBorder, height: 82, paddingTop: 8, paddingBottom: 18 },
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
       }}>
       <Tabs.Screen

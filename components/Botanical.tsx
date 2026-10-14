@@ -20,6 +20,6 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   branch: { position: 'absolute', width: 40, height: 2, backgroundColor: theme.colors.olive },
   leaf: { position: 'absolute', width: 27, height: 12, borderTopLeftRadius: 24, borderBottomRightRadius: 24, backgroundColor: theme.colors.olive, top: 6, left: 8 },
   flower: { position: 'absolute', left: -6, top: -10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
-  petal: { position: 'absolute', width: 9, height: 14, borderRadius: 8, backgroundColor: theme.colors.roseSoft, borderWidth: 0.5, borderColor: '#C6A68B' },
-  center: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#AE8B51' },
+  petal: { position: 'absolute', width: 9, height: 14, borderRadius: 8, backgroundColor: theme.colors.roseSoft, borderWidth: 0.5, borderColor: theme.colors.botanicalBorder },
+  center: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.botanicalCenter },
 });
