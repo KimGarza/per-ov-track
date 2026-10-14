@@ -4,11 +4,12 @@ import { Platform, StyleSheet } from 'react-native';
 export const designTokens = {
   fonts: { heading: 'CormorantGaramond', body: Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }) },
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
-  radius: { sm: 12, card: 26, pill: 100 },
+  radius: { xs: 4, sm: 12, calendarDay: 10, card: 26, pill: 100 },
   layout: { maxWidth: 720, gutter: 16, touchTarget: 44 },
 };
 export type ThemeColors = {
-  background: string; surface: string; text: string; muted: string;
+  background: string; surface: string; calendarSurface: string; text: string; muted: string;
+  calendarPeriod: string; calendarFertile: string; calendarText: string;
   onBackground: string; mutedOnBackground: string; accentOnBackground: string;
   rose: string; roseSoft: string; roseWash: string; sage: string; olive: string;
   onPeriod: string; onFertile: string; mutedOnFertile: string;
@@ -21,15 +22,17 @@ function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar']): Theme 
 }
 export const themes = {
   petal: defineTheme({
-    background: '#F8F3EB', surface: '#FCF8F1', text: '#49271E', muted: '#796355',
-    onBackground: '#49271E', mutedOnBackground: '#796355', accentOnBackground: '#B76E6B',
+    background: '#F8F3EB', surface: '#FCF8F1', calendarSurface: '#FFFAF3', text: '#36201B', muted: '#574137',
+    calendarPeriod: '#E7B2A9', calendarFertile: '#D9DEC2', calendarText: '#36201B',
+    onBackground: '#36201B', mutedOnBackground: '#574137', accentOnBackground: '#B76E6B',
     rose: '#B76E6B', roseSoft: '#E7B2A9', roseWash: '#F4E3DB', sage: '#D9DEC2', olive: '#858C67',
-    onPeriod: '#49271E', onFertile: '#49271E', mutedOnFertile: '#635442',
+    onPeriod: '#36201B', onFertile: '#36201B', mutedOnFertile: '#635442',
     border: '#E6DACE', backgroundBorder: '#E6DACE', white: '#FFFDF8', shadow: '#816650',
     botanicalBorder: '#C6A68B', botanicalCenter: '#AE8B51',
   }, 'dark'),
   burgundy: defineTheme({
-    background: '#3D1018', surface: '#F8EBD5', text: '#491C1D', muted: '#795640',
+    background: '#3D1018', surface: '#F8EBD5', calendarSurface: '#FFF0DA', text: '#35171C', muted: '#593B30',
+    calendarPeriod: '#DCA0A6', calendarFertile: '#C3CCAC', calendarText: '#35171C',
     onBackground: '#FFF3DC', mutedOnBackground: '#EBC677', accentOnBackground: '#EBC677',
     rose: '#9F2838', roseSoft: '#A92D3C', roseWash: '#F4E4CB', sage: '#4C603B', olive: '#78804A',
     onPeriod: '#FFF3DC', onFertile: '#FFF3DC', mutedOnFertile: '#F4E4CB',
