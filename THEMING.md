@@ -1,6 +1,6 @@
 # Crimson Rhythm themes
 
-The Themes control at the top right of Calendar lists the registered palettes. Selecting an option updates the whole app immediately and closes the dropdown. Tap outside it (or use Android Back) to dismiss. Selection lasts for the current app session.
+The Themes control in the side menu lists the registered palettes. Selecting an option updates the whole app immediately and closes the dropdown. Tap outside it (or use Android Back) to dismiss. Selection lasts for the current app session.
 
 `constants/Theme.ts` contains shared layout, typography, spacing, radii, reusable styles, and independent complete palettes. Neither palette inherits colors from the other. Colors express their context: `text`/`muted` are for cards, `onBackground`/`mutedOnBackground` for the page, and `onPeriod`/`onFertile` for calendar highlights. `calendarSurface`, `calendarPeriod`, `calendarFertile`, and `calendarText` give the calendar its own readable surface and highlights without changing the other semantic surfaces. Date highlights use the shared `radius.calendarDay` token; legend markers use `radius.xs`. Always pair a background with its matching foreground tokens.
 
@@ -12,7 +12,7 @@ const { theme, styles } = useAppTheme();
 
 Add a complete palette to `themes` and its display name to `themeLabels`. TypeScript checks the color contract and labels; `ThemeName` and `themeOptions` are derived automatically. No selector or screen changes are required. Avoid hardcoded colors, importing a fixed palette, and branching on theme names in UI. Shared component geometry belongs in `designTokens` or `createGlobalStyles`.
 
-The home calendar now uses locally saved menstrual/ovulation markings and journal entries, with no fabricated monthly highlights. Insights still shows demonstration statistics. Botanical details are lightweight stylized illustrations.
+The home calendar now uses locally saved menstrual/ovulation markings and journal entries, with clearly labeled sample colors on an empty calendar. Insights summarizes saved check-ins. Botanical details are lightweight stylized illustrations.
 
 The bundled Cormorant Garamond font uses the SIL Open Font License (see `assets/fonts/CormorantGaramond-LICENSE.txt`).
 
@@ -34,11 +34,11 @@ Run `npm test` for date/range/restore regression tests, including DST, leap days
 
 ## Responsive phone layout
 
-Home measures the available space inside the safe area and tab navigator, then sizes the grid from the actual month row count. It targets about 70% of the available height for the calendar, with a compact check-in below. Shared `calendar` sizing tokens control the limits; the minimum avoids making dates unreadably small. Short screens keep scrolling available, with a compact check-in rather than hiding editing features. Large text settings and landscape can require scrolling.
+Home measures the available space inside the safe area, then sizes the grid from the actual month row count. It targets about 70% of the available height for the calendar, with a compact check-in below. Shared `calendar` sizing tokens control the limits; the minimum avoids making dates unreadably small. Short screens keep scrolling available, with a compact check-in rather than hiding editing features. Large text settings and landscape can require scrolling.
 
 Crimson Rhythm stays on one line with width-dependent type and native font fitting. The inline Update cycle data button replaces the tall standalone calendar button. Check-in uses a compact date/prompt/Log today header; mood/symptom/note shortcuts appear when there is enough height. All fields remain available in the popup at every size.
 
-The tab bar uses a shared base height plus the device bottom safe-area inset. Native top insets and the measured content viewport account for notches, home indicators and Android navigation bars. Validate both five- and six-week months when changing sizing tokens.
+The side menu replaces the bottom tab bar, and screens retain bottom safe-area padding. Native top insets and the measured content viewport account for notches, home indicators and Android navigation bars. Validate both five- and six-week months when changing sizing tokens.
 
 ## Christian features
 
@@ -53,3 +53,11 @@ The custom question UI has a server connection ready for AI assistance. It requi
 Verse source: public-domain KJV text, https://www.gutenberg.org/ebooks/10. The verse catalog is bundled and used to bind AI-selected IDs to actual Scripture. Placeholder calendar dates are design data rather than a denominational liturgical calendar.
 
 Soft Petal uses its own light-pink backgrounds, rose highlights, and botanical decoration flag. Shared floral accents and backdrops read its palette; other palettes keep their own decoration and color choices.
+
+## Reference-inspired primary style
+
+Grace & Bloom is the default palette: parchment, ivory cards, dusty rose, sage and brown-burgundy text. Soft Petal retains its independent light pink florals. All four palettes implement the same semantic color contract, including a lighter `placeholder` token.
+
+The route group retains its `(tabs)` folder name for compatibility but now uses a Stack with a shared slide-out navigation menu. Calendar, Insights, Faith & guidance and Journal & goals have working destinations. Themes are available in the menu. The calendar retains the primary mobile viewport space; verse and encouragement cards follow the check-in.
+
+An empty calendar displays explicitly labeled example red/green date squares. They are presentation only and never saved or loaded into an editor as cycle records. Any saved check-in or cycle dates suppress the sample; users can also hide it immediately.

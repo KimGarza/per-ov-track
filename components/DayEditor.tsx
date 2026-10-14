@@ -35,7 +35,7 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
       </View>
       {(['mood', 'symptoms', 'notes'] as const).map(field => <View key={field} style={{ gap: theme.spacing.xs }}>
         <Text style={{ color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 15, fontWeight: '600' }}>{field.charAt(0).toUpperCase() + field.slice(1)}</Text>
-        <TextInput accessibilityLabel={field.charAt(0).toUpperCase() + field.slice(1)} autoFocus={field === initialField} editable={!busy} value={entry[field]} onChangeText={value => setEntry(previous => ({ ...previous, [field]: value }))} multiline={field !== 'mood'} maxLength={field === 'notes' ? 5000 : 1000} placeholder={field === 'mood' ? 'How is your mood?' : field === 'symptoms' ? 'What symptoms did you notice?' : 'Anything you want to remember'} placeholderTextColor={theme.colors.muted} style={[g.input, field !== 'mood' && { minHeight: 90, textAlignVertical: 'top' }]} />
+        <TextInput accessibilityLabel={field.charAt(0).toUpperCase() + field.slice(1)} autoFocus={field === initialField} editable={!busy} value={entry[field]} onChangeText={value => setEntry(previous => ({ ...previous, [field]: value }))} multiline={field !== 'mood'} maxLength={field === 'notes' ? 5000 : 1000} placeholder={field === 'mood' ? 'e.g. irritable, emotional, calm…' : field === 'symptoms' ? 'What symptoms did you notice?' : 'Anything you want to remember'} placeholderTextColor={theme.colors.placeholder} style={[g.input, field === 'mood' && !entry.mood && { fontStyle: 'italic' }, field !== 'mood' && { minHeight: 90, textAlignVertical: 'top' }]} />
       </View>)}
       {error && <Text accessibilityRole="alert" style={{ color: theme.colors.todayPeriod }}>{error}</Text>}
     </View>

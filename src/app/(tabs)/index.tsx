@@ -1,9 +1,9 @@
+import { MenuButton } from '@/components/SideMenu';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FaithBackdrop, ThemeFloralAccent } from '@/components/FaithBackdrop';
 import { DailyVerseReference, VerseIconButton, VersePopup } from '@/components/DailyVerse';
-import { ThemePicker } from '@/components/ThemePicker';
 import { CalendarGrid, CalendarLegend, MonthNavigation } from '@/components/CalendarGrid';
 import { CycleEditor } from '@/components/CycleEditor';
 import { DayEditor } from '@/components/DayEditor';
@@ -11,7 +11,8 @@ import { useCycleData } from '@/components/CycleDataProvider';
 import { useToday } from '@/components/useToday';
 import { createGlobalStyles, type Theme } from '@/constants/Theme';
 import { useAppTheme } from '@/components/ThemeProvider';
-import { cycleDay, dateKey, parseDate, type JournalEntry } from '@/utils/cycle';
+import { dailyVerse } from '@/utils/faith';
+import { cycleDay, dateKey, parseDate, type JournalEntry, type CycleKind } from '@/utils/cycle';
 
 type Editor = { type: 'cycle'; calendarFirst: boolean } | { type: 'day'; day: string; field?: keyof JournalEntry } | null;
 export default function HomeScreen() {
@@ -19,13 +20,20 @@ export default function HomeScreen() {
   const { data, ready, error, retry } = useCycleData();
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [viewport, setViewport] = useState({ width: window.width, height: window.height - insets.top - insets.bottom - theme.layout.tabBarHeight });
+  const [viewport, setViewport] = useState({ width: window.width, height: window.height - insets.top - insets.bottom });
   const compact = viewport.height < 560;
   const s = useMemo(() => createStyles(theme, viewport.width, compact), [theme, viewport.width, compact]);
   const today = useToday();
   const [month, setMonth] = useState(() => { const date = parseDate(today); return new Date(date.getFullYear(), date.getMonth(), 1); });
   const [selected, setSelected] = useState(today);
   const [verseOpen, setVerseOpen] = useState(false);
+  const [sampleDismissed, setSampleDismissed] = useState(false);
+  const showSample = !sampleDismissed && !Object.keys(data.days).length && !Object.keys(data.journal).length;
+  const sampleDays: Record<string, CycleKind> = {};
+  if (showSample) {
+    for (let day = 4; day <= 8; day++) sampleDays[dateKey(new Date(month.getFullYear(), month.getMonth(), day))] = 'menstrual';
+    for (let day = 16; day <= 20; day++) sampleDays[dateKey(new Date(month.getFullYear(), month.getMonth(), day))] = 'ovulation';
+  }
   const [editor, setEditor] = useState<Editor>(null);
   const rows = Math.ceil((month.getDay() + new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()) / 7);
   const reserveCheckin = viewport.height >= 560 ? theme.calendar.checkinHeight : viewport.height >= 480 ? 72 : 0;
@@ -37,14 +45,15 @@ export default function HomeScreen() {
   const currentCycleDay = cycleDay(data, today);
   const openDay = (day: string, field?: keyof JournalEntry) => { setSelected(day); setEditor({ type: 'day', day, field }); };
   const changeMonth = (value: Date) => { setMonth(value); setSelected(dateKey(value)); };
-  return <SafeAreaView style={g.screen} edges={['top']}>
+  return <SafeAreaView style={g.screen} edges={['top', 'bottom']}>
     <FaithBackdrop />
     <View style={{ flex: 1 }} onLayout={({ nativeEvent: { layout } }) => setViewport(previous => previous.width === layout.width && previous.height === layout.height ? previous : { width: layout.width, height: layout.height })}>
     <ScrollView contentContainerStyle={[g.content, s.content]} showsVerticalScrollIndicator={false}>
       <View style={s.header}>
-        <VerseIconButton onPress={() => setVerseOpen(true)} />
+        <MenuButton />
+        
         <View style={{ flex: 1, minWidth: 0 }}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={s.brand}>Crimson Rhythm</Text><DailyVerseReference day={today} onRead={() => setVerseOpen(true)} /></View>
-        <ThemePicker />
+        <VerseIconButton onPress={() => setVerseOpen(true)} />
       </View>
       {!ready ? <View style={g.card}>
         <Text accessibilityLiveRegion="polite" style={g.body}>{error ?? 'Loading your calendar…'}</Text>
@@ -57,8 +66,9 @@ export default function HomeScreen() {
             <Text numberOfLines={1} style={s.cycleTitle}>{currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'}</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="+ Update your cycle data" onPress={() => setEditor({ type: 'cycle', calendarFirst: false })} style={[g.outlineButton, s.update]}><Text style={s.updateText}>Update cycle data</Text></Pressable>
           </View>
-          <CalendarGrid month={month} today={today} days={data.days} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
+          <CalendarGrid month={month} today={today} days={showSample ? sampleDays : data.days} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
           <CalendarLegend compact />
+          {showSample && <Pressable accessibilityRole="button" accessibilityLabel="Hide sample calendar" onPress={() => setSampleDismissed(true)}><Text style={{ color: theme.colors.muted, fontSize: 11, textAlign: 'center' }}>Sample colors only · Add your dates above · Hide</Text></Pressable>}
         </View>
         <View style={[g.card, s.checkin]}>
           <View style={s.checkinHeader}>
@@ -71,9 +81,15 @@ export default function HomeScreen() {
           {!compact && <View style={s.actions}>{([{ icon: '☼', label: 'Mood', field: 'mood' }, { icon: '♡', label: 'Symptoms', field: 'symptoms' }, { icon: '≡', label: 'Notes', field: 'notes' }] as const).map(({ icon, label, field }) => <Pressable key={field} accessibilityRole="button" accessibilityLabel={`Edit ${label.toLowerCase()}`} onPress={() => openDay(selected, field)} style={[s.action, !!journal?.[field] && { backgroundColor: theme.colors.roseWash }]}>
             <Text style={s.actionText}>{icon} {label}{journal?.[field] ? ' ✓' : ''}</Text>
           </Pressable>)}</View>}
+          {!compact && !journal && <Text style={[s.savedPreview, { fontStyle: 'italic', color: theme.colors.placeholder }]}>e.g. calm, irritable, emotional…</Text>}
           {!compact && journal && <Text numberOfLines={1} style={s.savedPreview}>{[journal.mood && `Mood: ${journal.mood}`, journal.symptoms, journal.notes].filter(Boolean).join(' · ')}</Text>}
         </View>
-
+        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}>
+          <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
+          <Text style={[g.body, { fontFamily: theme.fonts.heading, fontSize: 22, lineHeight: 28 }]}>{dailyVerse(today).text}</Text>
+          <Text style={s.savedPreview}>{dailyVerse(today).reference} · KJV · Tap to reflect</Text>
+        </Pressable>
+        <View style={[g.card, { marginTop: theme.spacing.md, backgroundColor: theme.colors.roseWash }]}><Text style={[g.heading, { fontSize: 25 }]}>Different seasons, same God.</Text><Text style={g.body}>A quiet moment to notice your heart and begin again with grace.</Text></View>
       </>}
     </ScrollView>
     </View>

@@ -1,3 +1,4 @@
+import { MenuButton } from '@/components/SideMenu';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,7 +29,7 @@ export default function InsightsScreen() {
     <FaithBackdrop />
     <ScrollView contentContainerStyle={[g.content, { gap: theme.spacing.md }]} showsVerticalScrollIndicator={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-        <View style={{ flex: 1 }}><Text numberOfLines={1} adjustsFontSizeToFit style={[g.heading, { color: theme.colors.onBackground, fontSize: 34 }]}>Faith & feelings</Text><DailyVerseReference day={today} onRead={() => setVerseOpen(true)} /></View>
+        <MenuButton /><View style={{ flex: 1 }}><Text numberOfLines={1} adjustsFontSizeToFit style={[g.heading, { color: theme.colors.onBackground, fontSize: 34 }]}>Faith & feelings</Text><DailyVerseReference day={today} onRead={() => setVerseOpen(true)} /></View>
         <VerseIconButton onPress={() => setVerseOpen(true)} />
       </View>
       <Text style={[g.body, { color: theme.colors.mutedOnBackground }]}>A place to notice your heart, seek wisdom, and take a small step with Jesus.</Text>

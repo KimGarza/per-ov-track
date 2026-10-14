@@ -9,7 +9,7 @@ export const designTokens = {
   calendar: { minRowHeight: 35, maxRowHeight: 80, defaultRowHeight: 60, chromeHeight: 144, headerHeight: 52, checkinHeight: 120 },
 };
 export type ThemeColors = {
-  background: string; surface: string; calendarSurface: string; text: string; muted: string;
+  background: string; surface: string; calendarSurface: string; text: string; muted: string; placeholder: string;
   calendarPeriod: string; calendarFertile: string; calendarText: string;
   today: string; todayPeriod: string; todayFertile: string; overlay: string;
   onBackground: string; mutedOnBackground: string; accentOnBackground: string;
@@ -23,8 +23,17 @@ function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar'], decorat
   return { ...designTokens, colors, statusBar, decoration };
 }
 export const themes = {
+  grace: defineTheme({
+    background: '#F3EBDD', surface: '#FFFAF1', calendarSurface: '#FFFDF6', text: '#422E28', muted: '#6B5748', placeholder: '#A08E7E',
+    calendarPeriod: '#DEADB0', calendarFertile: '#CDD5B7', calendarText: '#422E28', today: '#9A763A', todayPeriod: '#843E4C', todayFertile: '#52613A', overlay: '#422E2866',
+    onBackground: '#422E28', mutedOnBackground: '#6B5748', accentOnBackground: '#96666B',
+    rose: '#9E6C72', roseSoft: '#DFC2BD', roseWash: '#F3E1DB', sage: '#CDD5B7', olive: '#7D8967',
+    onPeriod: '#422E28', onFertile: '#422E28', mutedOnFertile: '#6B5748',
+    border: '#DDCFBA', backgroundBorder: '#DDCFBA', white: '#FFFAF1', shadow: '#816650',
+    botanicalBorder: '#C3AD8C', botanicalCenter: '#AD9163',
+  }, 'dark', 'botanical'),
   petal: defineTheme({
-    background: '#FAEDF1', surface: '#FFF8FA', calendarSurface: '#FFF5F8', text: '#36201B', muted: '#574137',
+    background: '#FAEDF1', surface: '#FFF8FA', calendarSurface: '#FFF5F8', text: '#36201B', muted: '#574137', placeholder: '#997F79',
     calendarPeriod: '#EAB7C6', calendarFertile: '#D9DEC2', calendarText: '#36201B', today: '#946723', todayPeriod: '#8B3543', todayFertile: '#43562D', overlay: '#36201B66',
     onBackground: '#36201B', mutedOnBackground: '#574137', accentOnBackground: '#B76E86',
     rose: '#B76E86', roseSoft: '#ECC0CC', roseWash: '#F7DDE5', sage: '#D9DEC2', olive: '#858C67',
@@ -33,7 +42,7 @@ export const themes = {
     botanicalBorder: '#C6A68B', botanicalCenter: '#AE8B51',
   }, 'dark', 'botanical'),
   burgundy: defineTheme({
-    background: '#3D1018', surface: '#F8EBD5', calendarSurface: '#FFF0DA', text: '#35171C', muted: '#593B30',
+    background: '#3D1018', surface: '#F8EBD5', calendarSurface: '#FFF0DA', text: '#35171C', muted: '#593B30', placeholder: '#947D70',
     calendarPeriod: '#DCA0A6', calendarFertile: '#C3CCAC', calendarText: '#35171C', today: '#A57723', todayPeriod: '#842438', todayFertile: '#3D512B', overlay: '#35171C80',
     onBackground: '#FFF3DC', mutedOnBackground: '#EBC677', accentOnBackground: '#EBC677',
     rose: '#9F2838', roseSoft: '#A92D3C', roseWash: '#F4E4CB', sage: '#4C603B', olive: '#78804A',
@@ -42,7 +51,7 @@ export const themes = {
     botanicalBorder: '#DDC8AC', botanicalCenter: '#EBC677',
   }, 'light'),
   sanctuary: defineTheme({
-    background: '#151019', surface: '#EAE2DC', calendarSurface: '#F5EFEB', text: '#291924', muted: '#57404F',
+    background: '#151019', surface: '#EAE2DC', calendarSurface: '#F5EFEB', text: '#291924', muted: '#57404F', placeholder: '#95828D',
     calendarPeriod: '#CAA0B0', calendarFertile: '#C5CABA', calendarText: '#291924',
     today: '#7C6237', todayPeriod: '#713246', todayFertile: '#46523B', overlay: '#0B080DD9',
     onBackground: '#F6F0EA', mutedOnBackground: '#C9BECD', accentOnBackground: '#ECE5D7',
@@ -54,9 +63,9 @@ export const themes = {
 };
 export type ThemeName = keyof typeof themes;
 // Adding a theme requires a palette above and a label here; selectors derive their options.
-export const themeLabels: Record<ThemeName, string> = { petal: 'Soft Petal', burgundy: 'Burgundy Bloom', sanctuary: 'Gothic Sanctuary' };
+export const themeLabels: Record<ThemeName, string> = { grace: 'Grace & Bloom', petal: 'Soft Petal', burgundy: 'Burgundy Bloom', sanctuary: 'Gothic Sanctuary' };
 export const themeOptions = (Object.keys(themes) as ThemeName[]).map(id => ({ id, label: themeLabels[id] }));
-export const defaultThemeName: ThemeName = 'petal';
+export const defaultThemeName: ThemeName = 'grace';
 export const createGlobalStyles = (theme: Theme) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.background },
   content: { width: '100%', maxWidth: theme.layout.maxWidth, alignSelf: 'center', padding: theme.layout.gutter, paddingBottom: theme.spacing.xl },
