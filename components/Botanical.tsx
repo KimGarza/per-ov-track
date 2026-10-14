@@ -6,7 +6,7 @@ import { useAppTheme } from './ThemeProvider';
 export function Botanical({ small = false, flipped = false }: { small?: boolean; flipped?: boolean }) {
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
-  return <View pointerEvents="none" accessible={false} style={[styles.plant, small && { transform: [{ scale: 0.65 }] }, flipped && { transform: [{ scaleX: -1 }] }]}>
+  return <View pointerEvents="none" accessible={false} style={[styles.plant, { transform: [{ scale: small ? 0.65 : 1 }, { scaleX: flipped ? -1 : 1 }] }]}>
     <View style={styles.stem} />
     {[0, 1, 2, 3].map(i => <View key={i} style={[styles.branch, { top: 24 + i * 30, left: i % 2 ? 35 : 7, transform: [{ rotate: i % 2 ? '-35deg' : '35deg' }] }]}>
       <View style={styles.leaf} />

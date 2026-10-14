@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dailyVerse, holidayFor, type Verse } from '@/utils/faith';
@@ -17,7 +17,7 @@ export function DailyVerseReference({ day, onRead }: { day: string; onRead: () =
 export function VerseIconButton({ onPress }: { onPress: () => void }) {
   const { theme } = useAppTheme();
   return <Pressable accessibilityRole="button" accessibilityLabel="Enlarge daily verse" onPress={onPress} style={{ width: theme.layout.touchTarget, height: theme.layout.touchTarget, alignItems: 'center', justifyContent: 'center' }}>
-    <SymbolView name={{ ios: 'book.closed', android: 'menu_book', web: 'menu_book' }} tintColor={theme.colors.onBackground} size={26} />
+    {Platform.OS === 'ios' ? <Text accessible={false} style={{ fontSize: 26 }}>🙏</Text> : <SymbolView name={{ android: 'folded_hands', web: 'folded_hands' }} tintColor={theme.colors.onBackground} size={26} />}
   </Pressable>;
 }
 export function VersePopup({ day, onClose }: { day: string; onClose: () => void }) {

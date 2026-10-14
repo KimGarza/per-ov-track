@@ -1,6 +1,6 @@
 # Crimson Rhythm themes
 
-The Themes control at the top right of Calendar lists the registered palettes. Selecting an option updates the whole app immediately and keeps the dropdown open. Tap outside it (or use Android Back) to dismiss. Selection lasts for the current app session.
+The Themes control at the top right of Calendar lists the registered palettes. Selecting an option updates the whole app immediately and closes the dropdown. Tap outside it (or use Android Back) to dismiss. Selection lasts for the current app session.
 
 `constants/Theme.ts` contains shared layout, typography, spacing, radii, reusable styles, and independent complete palettes. Neither palette inherits colors from the other. Colors express their context: `text`/`muted` are for cards, `onBackground`/`mutedOnBackground` for the page, and `onPeriod`/`onFertile` for calendar highlights. `calendarSurface`, `calendarPeriod`, `calendarFertile`, and `calendarText` give the calendar its own readable surface and highlights without changing the other semantic surfaces. Date highlights use the shared `radius.calendarDay` token; legend markers use `radius.xs`. Always pair a background with its matching foreground tokens.
 
@@ -42,7 +42,7 @@ The tab bar uses a shared base height plus the device bottom safe-area inset. Na
 
 ## Christian features
 
-Gothic Sanctuary is a third independent palette. Its `decoration: 'celestial'` flag enables the moon, halo, stars and moth artwork through shared decoration components. The verse reader uses a simple Bible book icon tinted by the active palette.
+Gothic Sanctuary is a third independent palette. Its `decoration: 'celestial'` flag enables the moon, halo, stars and moth artwork through shared decoration components. The verse reader uses a praying-hands icon beside Crimson Rhythm (Material folded-hands on Android/web and the praying-hands glyph on iOS).
 
 The header shows a daily KJV Scripture reference. Tapping it or the Bible icon opens a spring/fade reader; reduced-motion settings skip the animation. The reference renders after client hydration so a server in another timezone cannot choose the phone's verse. Holiday markers are preview-only fixed month/day examples, as requested; moveable Easter-related dates are deliberately not calculated. Holiday day popups display the related verse.
 
@@ -51,3 +51,5 @@ Insights now uses real daily check-ins rather than fabricated cycle statistics. 
 The custom question UI has a server connection ready for AI assistance. It requires `EXPO_PUBLIC_GUIDANCE_API_URL` and the server-only OpenAI key; without them, prepared topics continue to work and the app clearly says personal guidance is not available yet. See `server/README.md` for setup. No key is embedded, no service is deployed, and no live AI call was made in this change.
 
 Verse source: public-domain KJV text, https://www.gutenberg.org/ebooks/10. The verse catalog is bundled and used to bind AI-selected IDs to actual Scripture. Placeholder calendar dates are design data rather than a denominational liturgical calendar.
+
+Soft Petal uses its own light-pink backgrounds, rose highlights, and botanical decoration flag. Shared floral accents and backdrops read its palette; other palettes keep their own decoration and color choices.

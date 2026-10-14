@@ -3,7 +3,7 @@
 Project assets created with the built-in image generation tool. PNGs are optimized app-sized copies; the originals remain outside the repository. Both have alpha transparency.
 
 - `assets/faith/moon-moth.png`: 384 × 256. Decorative artwork enabled by the palette's celestial decoration flag.
-- The verse control uses a built-in Bible book symbol. No hands artwork is included in the app.
+- The verse control uses a built-in praying-hands icon. No hands artwork is included in the app.
 
 Final moon/moth prompt:
 
