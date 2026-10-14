@@ -62,11 +62,7 @@ export default function HomeScreen() {
       </View> : <>
         <View style={[g.card, s.calendar]}>
           <ThemeFloralAccent />
-          <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setEditor({ type: 'cycle', calendarFirst: true })} />
-          <View style={s.cycleContext}>
-            <Text numberOfLines={1} style={s.cycleTitle}>{currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="+ Update your cycle data" onPress={() => setEditor({ type: 'cycle', calendarFirst: false })} style={[g.outlineButton, s.update]}><Text style={s.updateText}>Update cycle data</Text></Pressable>
-          </View>
+          <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setEditor({ type: 'cycle', calendarFirst: true })} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
           <CalendarGrid month={month} today={today} days={showSample ? sampleDays : data.days} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
           <CalendarLegend compact />
           {showSample && <Pressable accessibilityRole="button" accessibilityLabel="Hide sample calendar" onPress={() => setSampleDismissed(true)}><Text style={{ color: theme.colors.muted, fontSize: 11, textAlign: 'center' }}>Sample colors only · Add your dates above · Hide</Text></Pressable>}
@@ -107,9 +103,6 @@ const createStyles = (theme: Theme, width: number, compact: boolean) => {
     content: { paddingHorizontal: theme.spacing.sm, paddingTop: theme.spacing.xs },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm, paddingBottom: theme.spacing.xs },
     brand: { fontFamily: theme.fonts.heading, fontSize: width < 360 ? 18 : width < 400 ? 22 : 26, color: c.onBackground, minWidth: 0 },
-    cycleContext: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm, marginBottom: theme.spacing.xs },
-    cycleTitle: { flex: 1, minWidth: 0, fontFamily: theme.fonts.body, color: c.text, fontSize: 13, fontWeight: '600' },
-    update: { backgroundColor: c.roseWash, paddingHorizontal: theme.spacing.sm },
     updateText: { fontFamily: theme.fonts.body, color: c.text, fontSize: 13 },
     calendar: { backgroundColor: c.calendarSurface, paddingHorizontal: theme.spacing.sm, paddingVertical: theme.spacing.xs },
     checkin: { marginTop: theme.spacing.sm, padding: theme.spacing.sm },

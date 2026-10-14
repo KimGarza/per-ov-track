@@ -63,3 +63,9 @@ The route group retains its `(tabs)` folder name for compatibility but now uses 
 An empty calendar displays explicitly labeled example red/green date squares. They are presentation only and never saved or loaded into an editor as cycle records. Any saved check-in or cycle dates suppress the sample; users can also hide it immediately.
 
 The Grace & Bloom palette uses the requested tan-pink page background and coral accents. Scripture references appear without a redundant “Daily verse” suffix. Verse cards reuse palette-aware floral accents. A reserved illustration card uses lightweight stylized scenery as a replaceable placeholder; it is not a photograph.
+
+## Pink cycle action and flower dates
+
+The home month header now contains the Update cycle data pill. `cycleAction` and `onCycleAction` provide independent pink palettes with readable text. Month headings are two points larger. Navigation arrows and cycle context sit just beneath that row. Ovulation date markers and the legend use the shared five-petal `FlowerMarker` with the existing fertile color; menstrual squares and today/selection indicators remain readable. The same marker renderer is used in range selection.
+
+Daily check-in offers Typing and Voice memo modes. Voice memo is an explicitly labeled prototype with a fixed sample transcript and sample AI summary; it records nothing and makes no AI calls. The sample is only placed into notes after the user selects the explicit sample-copy action and is saved through the normal check-in flow.
