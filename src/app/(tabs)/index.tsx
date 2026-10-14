@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FaithBackdrop } from '@/components/FaithBackdrop';
+import { FaithBackdrop, ThemeFloralAccent } from '@/components/FaithBackdrop';
 import { DailyVerseReference, VerseIconButton, VersePopup } from '@/components/DailyVerse';
 import { ThemePicker } from '@/components/ThemePicker';
 import { CalendarGrid, CalendarLegend, MonthNavigation } from '@/components/CalendarGrid';
@@ -42,14 +42,16 @@ export default function HomeScreen() {
     <View style={{ flex: 1 }} onLayout={({ nativeEvent: { layout } }) => setViewport(previous => previous.width === layout.width && previous.height === layout.height ? previous : { width: layout.width, height: layout.height })}>
     <ScrollView contentContainerStyle={[g.content, s.content]} showsVerticalScrollIndicator={false}>
       <View style={s.header}>
+        <VerseIconButton onPress={() => setVerseOpen(true)} />
         <View style={{ flex: 1, minWidth: 0 }}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={s.brand}>Crimson Rhythm</Text><DailyVerseReference day={today} onRead={() => setVerseOpen(true)} /></View>
-        <ThemePicker /><VerseIconButton onPress={() => setVerseOpen(true)} />
+        <ThemePicker />
       </View>
       {!ready ? <View style={g.card}>
         <Text accessibilityLiveRegion="polite" style={g.body}>{error ?? 'Loading your calendar…'}</Text>
         {error && <Pressable accessibilityRole="button" onPress={() => { void retry(); }} style={g.button}><Text style={g.buttonText}>Try again</Text></Pressable>}
       </View> : <>
         <View style={[g.card, s.calendar]}>
+          <ThemeFloralAccent />
           <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setEditor({ type: 'cycle', calendarFirst: true })} />
           <View style={s.cycleContext}>
             <Text numberOfLines={1} style={s.cycleTitle}>{currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'}</Text>

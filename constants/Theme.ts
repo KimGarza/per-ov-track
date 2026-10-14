@@ -18,20 +18,20 @@ export type ThemeColors = {
   border: string; backgroundBorder: string; white: string; shadow: string;
   botanicalBorder: string; botanicalCenter: string;
 };
-export type Theme = typeof designTokens & { colors: ThemeColors; statusBar: 'light' | 'dark'; decoration: 'none' | 'celestial' };
+export type Theme = typeof designTokens & { colors: ThemeColors; statusBar: 'light' | 'dark'; decoration: 'none' | 'celestial' | 'botanical' };
 function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar'], decoration: Theme['decoration'] = 'none'): Theme {
   return { ...designTokens, colors, statusBar, decoration };
 }
 export const themes = {
   petal: defineTheme({
-    background: '#F8F3EB', surface: '#FCF8F1', calendarSurface: '#FFFAF3', text: '#36201B', muted: '#574137',
-    calendarPeriod: '#E7B2A9', calendarFertile: '#D9DEC2', calendarText: '#36201B', today: '#946723', todayPeriod: '#8B3543', todayFertile: '#43562D', overlay: '#36201B66',
-    onBackground: '#36201B', mutedOnBackground: '#574137', accentOnBackground: '#B76E6B',
-    rose: '#B76E6B', roseSoft: '#E7B2A9', roseWash: '#F4E3DB', sage: '#D9DEC2', olive: '#858C67',
+    background: '#FAEDF1', surface: '#FFF8FA', calendarSurface: '#FFF5F8', text: '#36201B', muted: '#574137',
+    calendarPeriod: '#EAB7C6', calendarFertile: '#D9DEC2', calendarText: '#36201B', today: '#946723', todayPeriod: '#8B3543', todayFertile: '#43562D', overlay: '#36201B66',
+    onBackground: '#36201B', mutedOnBackground: '#574137', accentOnBackground: '#B76E86',
+    rose: '#B76E86', roseSoft: '#ECC0CC', roseWash: '#F7DDE5', sage: '#D9DEC2', olive: '#858C67',
     onPeriod: '#36201B', onFertile: '#36201B', mutedOnFertile: '#635442',
-    border: '#E6DACE', backgroundBorder: '#E6DACE', white: '#FFFDF8', shadow: '#816650',
+    border: '#EBD3DB', backgroundBorder: '#EBD3DB', white: '#FFFDF8', shadow: '#816650',
     botanicalBorder: '#C6A68B', botanicalCenter: '#AE8B51',
-  }, 'dark'),
+  }, 'dark', 'botanical'),
   burgundy: defineTheme({
     background: '#3D1018', surface: '#F8EBD5', calendarSurface: '#FFF0DA', text: '#35171C', muted: '#593B30',
     calendarPeriod: '#DCA0A6', calendarFertile: '#C3CCAC', calendarText: '#35171C', today: '#A57723', todayPeriod: '#842438', todayFertile: '#3D512B', overlay: '#35171C80',
