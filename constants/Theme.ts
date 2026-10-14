@@ -10,6 +10,7 @@ export const designTokens = {
 export type ThemeColors = {
   background: string; surface: string; calendarSurface: string; text: string; muted: string;
   calendarPeriod: string; calendarFertile: string; calendarText: string;
+  today: string; todayPeriod: string; todayFertile: string; overlay: string;
   onBackground: string; mutedOnBackground: string; accentOnBackground: string;
   rose: string; roseSoft: string; roseWash: string; sage: string; olive: string;
   onPeriod: string; onFertile: string; mutedOnFertile: string;
@@ -23,7 +24,7 @@ function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar']): Theme 
 export const themes = {
   petal: defineTheme({
     background: '#F8F3EB', surface: '#FCF8F1', calendarSurface: '#FFFAF3', text: '#36201B', muted: '#574137',
-    calendarPeriod: '#E7B2A9', calendarFertile: '#D9DEC2', calendarText: '#36201B',
+    calendarPeriod: '#E7B2A9', calendarFertile: '#D9DEC2', calendarText: '#36201B', today: '#946723', todayPeriod: '#8B3543', todayFertile: '#43562D', overlay: '#36201B66',
     onBackground: '#36201B', mutedOnBackground: '#574137', accentOnBackground: '#B76E6B',
     rose: '#B76E6B', roseSoft: '#E7B2A9', roseWash: '#F4E3DB', sage: '#D9DEC2', olive: '#858C67',
     onPeriod: '#36201B', onFertile: '#36201B', mutedOnFertile: '#635442',
@@ -32,7 +33,7 @@ export const themes = {
   }, 'dark'),
   burgundy: defineTheme({
     background: '#3D1018', surface: '#F8EBD5', calendarSurface: '#FFF0DA', text: '#35171C', muted: '#593B30',
-    calendarPeriod: '#DCA0A6', calendarFertile: '#C3CCAC', calendarText: '#35171C',
+    calendarPeriod: '#DCA0A6', calendarFertile: '#C3CCAC', calendarText: '#35171C', today: '#A57723', todayPeriod: '#842438', todayFertile: '#3D512B', overlay: '#35171C80',
     onBackground: '#FFF3DC', mutedOnBackground: '#EBC677', accentOnBackground: '#EBC677',
     rose: '#9F2838', roseSoft: '#A92D3C', roseWash: '#F4E4CB', sage: '#4C603B', olive: '#78804A',
     onPeriod: '#FFF3DC', onFertile: '#FFF3DC', mutedOnFertile: '#F4E4CB',
@@ -53,5 +54,7 @@ export const createGlobalStyles = (theme: Theme) => StyleSheet.create({
   body: { fontFamily: theme.fonts.body, color: theme.colors.muted, fontSize: 16, lineHeight: 24 },
   button: { backgroundColor: theme.colors.rose, borderRadius: theme.radius.pill, paddingVertical: 17, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
   buttonText: { color: theme.colors.white, fontSize: 17, fontFamily: theme.fonts.body },
+  input: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.sm, padding: theme.spacing.md, minHeight: theme.layout.touchTarget, backgroundColor: theme.colors.calendarSurface, color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 16 },
+  disabled: { opacity: 0.45 },
   outlineButton: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.sm, minHeight: theme.layout.touchTarget, alignItems: 'center', justifyContent: 'center', padding: theme.spacing.sm },
 });
