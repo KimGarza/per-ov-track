@@ -12,6 +12,8 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
   const holiday = holidayFor(day);
   const [entry, setEntry] = useState<JournalEntry>(() => data.journal[day] ?? { mood: '', symptoms: '', notes: '' });
   const [kind, setKind] = useState<CycleKind | null>(data.days[day] ?? null);
+  const [inputMode, setInputMode] = useState<'typing' | 'voice'>('typing');
+  const [voicePreview, setVoicePreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const save = async () => {
@@ -30,6 +32,21 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
         <Text style={g.body}>{verses[holiday.verseId].text}</Text>
       </View>}
       <Text style={g.body}>How are you feeling?</Text>
+      <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+        {([{ id: 'typing', label: '✎ Typing' }, { id: 'voice', label: '♫ Voice memo' }] as const).map(option => <Pressable key={option.id} accessibilityRole="button" accessibilityLabel={option.id === 'typing' ? 'Typing input' : 'Voice memo input'} accessibilityState={{ selected: inputMode === option.id }} disabled={busy} onPress={() => setInputMode(option.id)} style={[g.outlineButton, { flex: 1, backgroundColor: inputMode === option.id ? theme.colors.roseWash : theme.colors.surface }]}><Text style={{ color: theme.colors.text, fontWeight: '600' }}>{option.label}</Text></Pressable>)}
+      </View>
+      {inputMode === 'voice' && <View style={[g.card, { padding: theme.spacing.md, gap: theme.spacing.sm, backgroundColor: theme.colors.roseWash }]}>
+        <Text style={[g.heading, { fontSize: 25 }]}>A moment to speak freely</Text>
+        <Text style={g.body}>Voice memo preview · Recording, transcription and AI summarizing will be connected later. This demo does not use your microphone.</Text>
+        <Pressable accessibilityRole="button" onPress={() => setVoicePreview(true)} style={g.outlineButton}><Text style={{ color: theme.colors.text }}>Try voice memo preview</Text></Pressable>
+        {voicePreview && <>
+          <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Sample transcript</Text>
+          <Text style={[g.body, { fontStyle: 'italic' }]}>Today felt busy. I was a little emotional this morning, but a walk and a quiet moment of prayer helped me feel calmer. I want to give myself more time to rest tonight.</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Sample AI summary</Text>
+          <Text style={g.body}>An emotional start to a busy day. Walking and prayer brought some calm. Intention for tonight: make time for rest.</Text>
+          <Pressable accessibilityRole="button" onPress={() => { setEntry(previous => ({ ...previous, notes: [previous.notes, 'Sample voice memo: An emotional start to a busy day. Walking and prayer brought some calm. Intention for tonight: make time for rest.'].filter(Boolean).join('\n\n') })); setInputMode('typing'); }} style={g.outlineButton}><Text style={{ color: theme.colors.text }}>Put sample summary in notes</Text></Pressable>
+        </>}
+      </View>}
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
         {([{ value: 'menstrual', label: 'Menstrual', color: theme.colors.calendarPeriod }, { value: 'ovulation', label: 'Ovulation', color: theme.colors.calendarFertile }, { value: null, label: 'Neither', color: theme.colors.roseWash }] as const).map(option => <Pressable key={option.label} accessibilityRole="button" accessibilityState={{ selected: kind === option.value }} disabled={busy} onPress={() => setKind(option.value)} style={[g.outlineButton, { flexGrow: 1, backgroundColor: kind === option.value ? option.color : theme.colors.surface, borderColor: kind === option.value ? theme.colors.text : theme.colors.border }]}><Text style={{ color: theme.colors.text }}>{option.label}</Text></Pressable>)}
       </View>

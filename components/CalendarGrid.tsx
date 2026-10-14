@@ -7,16 +7,30 @@ import { christianDays } from '@/utils/faith';
 import { useAppTheme } from './ThemeProvider';
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-export function MonthNavigation({ month, onChange, onTitlePress, compact = false }: {
-  month: Date; onChange: (month: Date) => void; onTitlePress?: () => void; compact?: boolean;
-}) {
-  const { theme } = useAppTheme();
-  const s = useMemo(() => createStyles(theme), [theme]);
-  return <View style={s.monthRow}>
-    <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => onChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={s.arrow}><Text style={s.arrowText}>‹</Text></Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel={`${month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}, open calendar`} onPress={onTitlePress} disabled={!onTitlePress} style={s.monthTitle}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[s.month, compact && { fontSize: 26 }]}>{month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text></Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => onChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={s.arrow}><Text style={s.arrowText}>›</Text></Pressable>
+export function FlowerMarker({ color, size }: { color: string; size?: number }) {
+  return <View pointerEvents="none" accessible={false} style={size ? { width: size, height: size } : StyleSheet.absoluteFill}>
+    {Array.from({ length: 5 }, (_, index) => {
+      const angle = (index * 72 - 90) * Math.PI / 180;
+      return <View key={index} style={{ position: 'absolute', width: '52%', height: '52%', borderRadius: 100,
+        left: `${24 + 24 * Math.cos(angle)}%`, top: `${24 + 24 * Math.sin(angle)}%`, backgroundColor: color }} />;
+    })}
+    <View style={{ position: 'absolute', left: '20%', top: '20%', width: '60%', height: '60%', borderRadius: 100, backgroundColor: color }} />
   </View>;
+}
+export function MonthNavigation({ month, onChange, onTitlePress, compact = false, onUpdate, cycleLabel }: {
+  month: Date; onChange: (month: Date) => void; onTitlePress?: () => void; compact?: boolean;
+  onUpdate?: () => void; cycleLabel?: string;
+}) {
+  const { theme, styles: g } = useAppTheme();
+  const s = useMemo(() => createStyles(theme), [theme]);
+  const title = <Pressable accessibilityRole="button" accessibilityLabel={`${month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}, open calendar`} onPress={onTitlePress} disabled={!onTitlePress} style={s.monthTitle}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[s.month, compact && { fontSize: 28 }]}>{month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text></Pressable>;
+  const previous = <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => onChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={s.arrow}><Text style={s.arrowText}>‹</Text></Pressable>;
+  const next = <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => onChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={s.arrow}><Text style={s.arrowText}>›</Text></Pressable>;
+  if (!onUpdate) return <View style={s.monthRow}>{previous}{title}{next}</View>;
+  return <>
+    <View style={[s.monthRow, { gap: theme.spacing.sm }]}>{title}<Pressable accessibilityRole="button" accessibilityLabel="+ Update your cycle data" onPress={onUpdate} style={[g.outlineButton, { width: 108, backgroundColor: theme.colors.cycleAction, borderColor: theme.colors.cycleAction, borderRadius: theme.radius.pill }]}><Text style={{ color: theme.colors.onCycleAction, textAlign: 'center', fontSize: 12, fontWeight: '600' }}>Update cycle{ '\n' }data</Text></Pressable></View>
+    <View style={s.monthRow}>{previous}<Text style={{ flex: 1, textAlign: 'center', color: theme.colors.muted, fontSize: 13 }}>{cycleLabel}</Text>{next}</View>
+  </>;
 }
 export function CalendarGrid({ month, today, days, selected, range, previewKind, onSelect, rowHeight = 60 }: {
   month: Date; today: string; days: Record<string, CycleKind>; selected?: string;
@@ -44,10 +58,11 @@ export function CalendarGrid({ month, today, days, selected, range, previewKind,
           s.day,
           { maxWidth: Math.min(56, rowHeight - 4) },
           kind === 'menstrual' && { backgroundColor: c.calendarPeriod },
-          kind === 'ovulation' && { backgroundColor: c.calendarFertile },
+
           (key === selected || inRange) && { borderWidth: 1.5, borderColor: kind === 'menstrual' ? c.todayPeriod : kind === 'ovulation' ? c.todayFertile : c.calendarText },
           isToday && { borderWidth: 2, borderColor: markerColor, borderRadius: theme.radius.card },
         ]}>
+          {kind === 'ovulation' && <FlowerMarker color={c.calendarFertile} />}
           {holidays[key] && <Text accessible={false} style={{ position: 'absolute', top: 1, right: 2, color: c.today, fontSize: 10 }}>✝</Text>}
           <Text style={[s.dayText, rowHeight < 50 && { fontSize: 17 }, isToday && { color: markerColor, fontSize: rowHeight < 44 ? 15 : 19 }]}>{day}</Text>
           {isToday && <SymbolView name={kind === 'menstrual' ? { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' } : kind === 'ovulation' ? { ios: 'camera.macro', android: 'local_florist', web: 'local_florist' } : { ios: 'sun.max.fill', android: 'sunny', web: 'sunny' }} tintColor={markerColor} size={rowHeight < 44 ? 11 : 14} />}
@@ -60,7 +75,7 @@ export function CalendarLegend({ compact = false }: { compact?: boolean }) {
   const { theme } = useAppTheme();
   const s = useMemo(() => createStyles(theme), [theme]);
   return <View style={[s.legend, compact && { paddingTop: 4, marginTop: 4, gap: 12 }]}>
-    {([['Menstrual', theme.colors.calendarPeriod], ['Ovulation', theme.colors.calendarFertile]] as const).map(([label, color]) => <View key={label} style={s.legendItem}><View style={[s.dot, { backgroundColor: color }]} /><Text style={s.legendText}>{label}</Text></View>)}
+    {([['Menstrual', theme.colors.calendarPeriod], ['Ovulation', theme.colors.calendarFertile]] as const).map(([label, color]) => <View key={label} style={s.legendItem}>{label === 'Ovulation' ? <FlowerMarker color={color} size={15} /> : <View style={[s.dot, { backgroundColor: color }]} />}<Text style={s.legendText}>{label}</Text></View>)}
     <View style={s.legendItem}><Text style={{ color: theme.colors.today }}>☼</Text><Text style={s.legendText}>Today</Text></View>
   </View>;
 }
@@ -70,7 +85,7 @@ const createStyles = (theme: Theme) => {
   return StyleSheet.create({
     monthRow: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.xs },
     monthTitle: { flex: 1, minHeight: theme.layout.touchTarget, justifyContent: 'center' },
-    month: { ...g.heading, fontSize: 32, textAlign: 'center' },
+    month: { ...g.heading, fontSize: 34, textAlign: 'center' },
     arrow: { width: theme.layout.touchTarget, height: theme.layout.touchTarget, alignItems: 'center', justifyContent: 'center' },
     arrowText: { color: c.text, fontSize: 38, lineHeight: 42 },
     grid: { flexDirection: 'row', flexWrap: 'wrap' },
