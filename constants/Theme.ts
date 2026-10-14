@@ -24,13 +24,13 @@ function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar'], decorat
 }
 export const themes = {
   grace: defineTheme({
-    background: '#F3EBDD', surface: '#FFFAF1', calendarSurface: '#FFFDF6', text: '#422E28', muted: '#6B5748', placeholder: '#A08E7E',
-    calendarPeriod: '#DEADB0', calendarFertile: '#CDD5B7', calendarText: '#422E28', today: '#9A763A', todayPeriod: '#843E4C', todayFertile: '#52613A', overlay: '#422E2866',
-    onBackground: '#422E28', mutedOnBackground: '#6B5748', accentOnBackground: '#96666B',
-    rose: '#9E6C72', roseSoft: '#DFC2BD', roseWash: '#F3E1DB', sage: '#CDD5B7', olive: '#7D8967',
-    onPeriod: '#422E28', onFertile: '#422E28', mutedOnFertile: '#6B5748',
-    border: '#DDCFBA', backgroundBorder: '#DDCFBA', white: '#FFFAF1', shadow: '#816650',
-    botanicalBorder: '#C3AD8C', botanicalCenter: '#AD9163',
+    background: '#E9D7C9', surface: '#FFF7F1', calendarSurface: '#FFFAF6', text: '#422E28', muted: '#71534B', placeholder: '#A4867B',
+    calendarPeriod: '#E6A6A1', calendarFertile: '#CCD7B9', calendarText: '#422E28', today: '#9A763A', todayPeriod: '#843E4C', todayFertile: '#52613A', overlay: '#422E2866',
+    onBackground: '#422E28', mutedOnBackground: '#71534B', accentOnBackground: '#A55552',
+    rose: '#AD5D58', roseSoft: '#EDB6AC', roseWash: '#F7DDD4', sage: '#CCD7B9', olive: '#7D8967',
+    onPeriod: '#422E28', onFertile: '#422E28', mutedOnFertile: '#71534B',
+    border: '#DEC1B2', backgroundBorder: '#DEC1B2', white: '#FFF7F1', shadow: '#816650',
+    botanicalBorder: '#BAA18A', botanicalCenter: '#BC8C69',
   }, 'dark', 'botanical'),
   petal: defineTheme({
     background: '#FAEDF1', surface: '#FFF8FA', calendarSurface: '#FFF5F8', text: '#36201B', muted: '#574137', placeholder: '#997F79',

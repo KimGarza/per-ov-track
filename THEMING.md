@@ -56,8 +56,10 @@ Soft Petal uses its own light-pink backgrounds, rose highlights, and botanical d
 
 ## Reference-inspired primary style
 
-Grace & Bloom is the default palette: parchment, ivory cards, dusty rose, sage and brown-burgundy text. Soft Petal retains its independent light pink florals. All four palettes implement the same semantic color contract, including a lighter `placeholder` token.
+Grace & Bloom is the default palette: tan-pink (`#E9D7C9`), warm ivory cards, soft coral-pink, sage and brown-burgundy text. Soft Petal retains its independent light pink florals. All four palettes implement the same semantic color contract, including a lighter `placeholder` token.
 
 The route group retains its `(tabs)` folder name for compatibility but now uses a Stack with a shared slide-out navigation menu. Calendar, Insights, Faith & guidance and Journal & goals have working destinations. Themes are available in the menu. The calendar retains the primary mobile viewport space; verse and encouragement cards follow the check-in.
 
 An empty calendar displays explicitly labeled example red/green date squares. They are presentation only and never saved or loaded into an editor as cycle records. Any saved check-in or cycle dates suppress the sample; users can also hide it immediately.
+
+The Grace & Bloom palette uses the requested tan-pink page background and coral accents. Scripture references appear without a redundant “Daily verse” suffix. Verse cards reuse palette-aware floral accents. A reserved illustration card uses lightweight stylized scenery as a replaceable placeholder; it is not a photograph.
