@@ -1,8 +1,7 @@
 import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react';
-import { createGlobalStyles, themes } from '@/constants/Theme';
-type ThemeName = keyof typeof themes;
+import { createGlobalStyles, defaultThemeName, themes, type ThemeName } from '@/constants/Theme';
 function useThemeState() {
-  const [name, setName] = useState<ThemeName>('petal');
+  const [name, setName] = useState<ThemeName>(defaultThemeName);
   const theme = themes[name];
   const styles = useMemo(() => createGlobalStyles(theme), [theme]);
   return { name, setName, theme, styles };

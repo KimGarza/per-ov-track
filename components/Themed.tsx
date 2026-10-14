@@ -1,13 +1,6 @@
-/**
- * Learn more about Light and Dark modes:
- * https://docs.expo.io/guides/color-schemes/
- */
 import { Text as DefaultText, View as DefaultView } from 'react-native';
 
 import { useAppTheme } from './ThemeProvider';
-
-import Colors from '@/constants/Colors';
-import { theme } from '@/constants/Theme';
 
 type ThemeProps = {
   lightColor?: string;
@@ -19,7 +12,7 @@ export type ViewProps = ThemeProps & DefaultView['props'];
 
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
+  colorName: 'text' | 'background' | 'tint' | 'tabIconDefault' | 'tabIconSelected'
 ) {
   const { theme } = useAppTheme();
   const colorFromProps = props.light;
@@ -34,6 +27,7 @@ export function useThemeColor(
 
 export function Text(props: TextProps) {
   const { style, lightColor, darkColor, ...otherProps } = props;
+  const { theme } = useAppTheme();
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
 
   return <DefaultText style={[{ color, fontFamily: theme.fonts.body }, style]} {...otherProps} />;

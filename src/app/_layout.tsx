@@ -1,3 +1,4 @@
+import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Stack, DefaultTheme, ThemeProvider } from 'expo-router';
 import { AppThemeProvider, useAppTheme } from '@/components/ThemeProvider';
@@ -50,6 +51,7 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: theme.colors.background, card: theme.colors.surface, text: theme.colors.text, primary: theme.colors.rose, border: theme.colors.border } }}>
+      <StatusBar style={theme.statusBar} />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
