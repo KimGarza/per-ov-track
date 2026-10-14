@@ -1,3 +1,4 @@
+import { IllustrationPlaceholder } from '@/components/IllustrationPlaceholder';
 import { MenuButton } from '@/components/SideMenu';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -84,11 +85,12 @@ export default function HomeScreen() {
           {!compact && !journal && <Text style={[s.savedPreview, { fontStyle: 'italic', color: theme.colors.placeholder }]}>e.g. calm, irritable, emotional…</Text>}
           {!compact && journal && <Text numberOfLines={1} style={s.savedPreview}>{[journal.mood && `Mood: ${journal.mood}`, journal.symptoms, journal.notes].filter(Boolean).join(' · ')}</Text>}
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><ThemeFloralAccent />
           <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
           <Text style={[g.body, { fontFamily: theme.fonts.heading, fontSize: 22, lineHeight: 28 }]}>{dailyVerse(today).text}</Text>
           <Text style={s.savedPreview}>{dailyVerse(today).reference} · KJV · Tap to reflect</Text>
         </Pressable>
+        <View style={{ marginTop: theme.spacing.md }}><IllustrationPlaceholder /></View>
         <View style={[g.card, { marginTop: theme.spacing.md, backgroundColor: theme.colors.roseWash }]}><Text style={[g.heading, { fontSize: 25 }]}>Different seasons, same God.</Text><Text style={g.body}>A quiet moment to notice your heart and begin again with grace.</Text></View>
       </>}
     </ScrollView>
