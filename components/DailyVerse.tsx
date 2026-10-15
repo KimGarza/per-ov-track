@@ -11,7 +11,7 @@ export function DailyVerseReference({ day, onRead }: { day: string; onRead: () =
   const clientDay = useClientOnlyValue<string | null, string>(null, day);
   const reference = clientDay ? dailyVerse(clientDay).reference : null;
   return <Pressable accessibilityRole="button" accessibilityLabel={reference ? `Read today's verse, ${reference}` : "Read today's verse"} onPress={onRead}>
-    <Text numberOfLines={1} style={{ color: theme.colors.mutedOnBackground, fontFamily: theme.fonts.body, fontSize: 11, lineHeight: 15 }}>{reference ?? ' '}</Text>
+    <Text numberOfLines={1} style={{ color: theme.colors.onBackground, fontFamily: theme.fonts.body, fontSize: 11, lineHeight: 15 }}>{reference ?? ' '}</Text>
   </Pressable>;
 }
 export function VerseIconButton({ onPress }: { onPress: () => void }) {

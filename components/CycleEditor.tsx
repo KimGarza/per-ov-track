@@ -70,7 +70,7 @@ export function CycleEditor({ initialDate, today, calendarFirst = false, onClose
             changeMonth(new Date(number, index, 1)); setJump(false); setError(null);
           }} style={[g.outlineButton, { width: '23%' }]}><Text style={{ color: theme.colors.text }}>{label}</Text></Pressable>)}</View>
         </View>}
-        <CalendarGrid month={month} today={today} days={data.days} range={range} previewKind={kind} onSelect={select} />
+        <CalendarGrid month={month} today={today} days={data.days} pendingDays={data.pendingDays} range={range} previewKind={kind} onSelect={select} />
         <CalendarLegend />
       </View>
       <Text style={[g.body, { fontSize: 12 }]}>Saving replaces the marking on these dates. Other dates and check-ins stay as they are.</Text>

@@ -1,3 +1,4 @@
+import { JournalBook, JournalIconButton } from '@/components/JournalBook';
 import { router, useLocalSearchParams } from 'expo-router';
 import { panelTitles, type PrimaryPanel } from '@/components/PrimaryPanels';
 import { IllustrationPlaceholder } from '@/components/IllustrationPlaceholder';
@@ -37,6 +38,7 @@ export default function HomeScreen() {
   const today = useToday();
   const [month, setMonth] = useState(() => { const date = parseDate(today); return new Date(date.getFullYear(), date.getMonth(), 1); });
   const [selected, setSelected] = useState(today);
+  const [journalOpen, setJournalOpen] = useState(false);
   const [verseOpen, setVerseOpen] = useState(false);
   const [sampleDismissed, setSampleDismissed] = useState(false);
   const showSample = !sampleDismissed && !Object.keys(data.days).length && !Object.keys(data.journal).length;
@@ -64,7 +66,7 @@ export default function HomeScreen() {
         <MenuButton />
         
         <View style={{ flex: 1, minWidth: 0 }}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={s.brand}>Crimson Rhythm</Text><DailyVerseReference day={today} onRead={() => setVerseOpen(true)} /></View>
-        <VerseIconButton onPress={() => setVerseOpen(true)} />
+        <JournalIconButton onPress={() => setJournalOpen(true)} /><VerseIconButton onPress={() => setVerseOpen(true)} />
       </View>
       {!ready ? <View style={g.card}>
         <Text accessibilityLiveRegion="polite" style={g.body}>{error ?? 'Loading your calendar…'}</Text>
@@ -73,7 +75,7 @@ export default function HomeScreen() {
         <View style={[g.card, s.calendar]}>
           <ThemeFloralAccent />
           <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setEditor({ type: 'cycle', calendarFirst: true })} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
-          <CalendarGrid month={month} today={today} days={showSample ? sampleDays : data.days} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
+          <CalendarGrid month={month} today={today} days={data.days} predictedDays={showSample ? sampleDays : {}} pendingDays={data.pendingDays} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
           <CalendarLegend compact />
           {showSample && <Pressable accessibilityRole="button" accessibilityLabel="Hide sample calendar" onPress={() => setSampleDismissed(true)}><Text style={{ color: theme.colors.muted, fontSize: 11, textAlign: 'center' }}>Sample colors only · Add your dates above · Hide</Text></Pressable>}
         </View>
@@ -104,6 +106,7 @@ export default function HomeScreen() {
       </>}
     </ScrollView>
     </View>
+    {journalOpen && <JournalBook onClose={() => setJournalOpen(false)} />}
     {verseOpen && <VersePopup day={today} onClose={() => setVerseOpen(false)} />}
     {editor?.type === 'cycle' && <CycleEditor initialDate={selected} today={today} calendarFirst={editor.calendarFirst} onClose={() => setEditor(null)} onJournal={day => openDay(day)} />}
     {editor?.type === 'day' && <DayEditor key={editor.day} day={editor.day} initialField={editor.field} onClose={() => setEditor(null)} />}

@@ -5,6 +5,8 @@ export type CycleData = {
   version: 1;
   days: Record<string, CycleKind>;
   journal: Record<string, JournalEntry>;
+  pendingDays?: Record<string, true>;
+  diary?: Record<string, string>;
   reflections?: Record<string, ReflectionEntry>;
 };
 export const emptyCycleData = (): CycleData => ({ version: 1, days: {}, journal: {} });
@@ -51,10 +53,10 @@ export function applyRange(data: CycleData, kind: CycleKind | null, start: strin
   return { ...data, days };
 }
 export function cycleDay(data: CycleData, today: string): number | null {
-  const periods = Object.keys(data.days).filter(key => key <= today && data.days[key] === 'menstrual').sort();
+  const periods = Object.keys(data.days).filter(key => key <= today && !data.pendingDays?.[key] && data.days[key] === 'menstrual').sort();
   if (!periods.length) return null;
   let start = periods[periods.length - 1];
-  while (data.days[addDays(start, -1)] === 'menstrual') start = addDays(start, -1);
+  while (data.days[addDays(start, -1)] === 'menstrual' && !data.pendingDays?.[addDays(start, -1)]) start = addDays(start, -1);
   return daysBetween(start, today) + 1;
 }
 export function readCycleData(value: string): CycleData {
@@ -77,5 +79,37 @@ export function readCycleData(value: string): CycleData {
       if (!entry || typeof entry.pattern !== 'string' || typeof entry.action !== 'string' || !Array.isArray(entry.completed) || !entry.completed.every(id => typeof id === 'string')) throw new Error('Invalid saved reflection');
     }
   }
+  if (data.pendingDays) {
+    if (typeof data.pendingDays !== 'object' || Array.isArray(data.pendingDays)) throw new Error('Invalid pending dates');
+    for (const [day, value] of Object.entries(data.pendingDays)) { parseDate(day); if (value !== true || !data.days[day]) throw new Error('Invalid pending date'); }
+  } else {
+    const today = dateKey(new Date());
+    const pending: Record<string, true> = {};
+    for (const day of Object.keys(data.days)) if (day > today) pending[day] = true;
+    if (Object.keys(pending).length) data.pendingDays = pending;
+  }
+  if (data.diary) {
+    if (typeof data.diary !== 'object' || Array.isArray(data.diary)) throw new Error('Invalid diary');
+    for (const [day, entry] of Object.entries(data.diary)) { parseDate(day); if (typeof entry !== 'string') throw new Error('Invalid diary entry'); }
+  }
   return data;
+}
+
+// Future markings remain plans until a user explicitly logs them on/after that date.
+export function applyLoggedRange(data: CycleData, kind: CycleKind | null, start: string, end: string, today: string): CycleData {
+  const next = applyRange(data, kind, start, end);
+  const pendingDays = { ...data.pendingDays };
+  for (const day of rangeDates(start, end)) {
+    if (kind && day > today) pendingDays[day] = true;
+    else delete pendingDays[day];
+  }
+  return { ...next, pendingDays };
+}
+export function mixColor(color: string, surface: string, amount = 0.48): string {
+  const rgb = (value: string): number[] => {
+    if (value.startsWith('#')) { const hex = value.slice(1); return [0, 2, 4].map(index => parseInt(hex.slice(index, index + 2), 16)); }
+    return value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [255, 255, 255];
+  };
+  const base = rgb(color), paper = rgb(surface);
+  return `rgb(${base.map((value, index) => Math.round(value * (1 - amount) + paper[index] * amount)).join(', ')})`;
 }
