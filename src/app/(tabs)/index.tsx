@@ -79,13 +79,17 @@ export default function HomeScreen() {
           <CalendarLegend compact />
           {showSample && <Pressable accessibilityRole="button" accessibilityLabel="Hide sample calendar" onPress={() => setSampleDismissed(true)}><Text style={{ color: theme.colors.muted, fontSize: 11, textAlign: 'center' }}>Sample colors only · Add your dates above · Hide</Text></Pressable>}
         </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><ThemeFloralAccent />
+          <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
+          <Text style={[g.body, { fontFamily: theme.fonts.heading, fontSize: 22, lineHeight: 28 }]}>{dailyVerse(today).text}</Text>
+          <Text style={s.savedPreview}>{dailyVerse(today).reference} · KJV · Tap to reflect</Text>
+        </Pressable>
         <View style={[g.card, s.checkin]}>
           <View style={s.checkinHeader}>
             <Pressable accessibilityRole="button" accessibilityLabel="Edit daily check-in" onPress={() => openDay(selected)} style={{ flex: 1 }}>
               <Text numberOfLines={1} style={s.date}>{selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
               <Text numberOfLines={1} style={s.checkinPrompt}>How are you feeling?</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="+ Log today" onPress={() => { const date = parseDate(today); setMonth(new Date(date.getFullYear(), date.getMonth(), 1)); openDay(today); }} style={[g.outlineButton, s.logToday]}><Text style={s.updateText}>+ Log today</Text></Pressable>
           </View>
           {!compact && <View style={s.actions}>{([{ icon: '☼', label: 'Mood', field: 'mood' }, { icon: '♡', label: 'Symptoms', field: 'symptoms' }, { icon: '≡', label: 'Notes', field: 'notes' }] as const).map(({ icon, label, field }) => <Pressable key={field} accessibilityRole="button" accessibilityLabel={`Edit ${label.toLowerCase()}`} onPress={() => openDay(selected, field)} style={[s.action, !!journal?.[field] && { backgroundColor: theme.colors.roseWash }]}>
             <Text style={s.actionText}>{icon} {label}{journal?.[field] ? ' ✓' : ''}</Text>
@@ -93,14 +97,6 @@ export default function HomeScreen() {
           {!compact && !journal && <Text style={[s.savedPreview, { fontStyle: 'italic', color: theme.colors.placeholder }]}>e.g. calm, irritable, emotional…</Text>}
           {!compact && journal && <Text numberOfLines={1} style={s.savedPreview}>{[journal.mood && `Mood: ${journal.mood}`, journal.symptoms, journal.notes].filter(Boolean).join(' · ')}</Text>}
         </View>
-        <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
-          {([{ label: 'Insights', panel: 'insights' }, { label: 'Faith', panel: 'faith' }, { label: 'Journal', panel: 'journal' }] as const).map(item => <Pressable key={item.panel} accessibilityRole="button" accessibilityLabel={`Open ${item.label.toLowerCase()}`} onPress={() => openPanel(item.panel)} style={[g.outlineButton, { flex: 1, backgroundColor: theme.colors.surface }]}><Text style={{ color: theme.colors.text, fontSize: 13 }}>{item.label}</Text></Pressable>)}
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><ThemeFloralAccent />
-          <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
-          <Text style={[g.body, { fontFamily: theme.fonts.heading, fontSize: 22, lineHeight: 28 }]}>{dailyVerse(today).text}</Text>
-          <Text style={s.savedPreview}>{dailyVerse(today).reference} · KJV · Tap to reflect</Text>
-        </Pressable>
         <View style={{ marginTop: theme.spacing.md }}><IllustrationPlaceholder /></View>
       </>}
     </ScrollView>
@@ -118,13 +114,11 @@ const createStyles = (theme: Theme, width: number, compact: boolean) => {
     content: { paddingHorizontal: theme.spacing.sm, paddingTop: theme.spacing.xs },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm, paddingBottom: theme.spacing.xs },
     brand: { fontFamily: theme.fonts.heading, fontSize: width < 360 ? 18 : width < 400 ? 22 : 26, color: c.onBackground, minWidth: 0 },
-    updateText: { fontFamily: theme.fonts.body, color: c.text, fontSize: 13 },
     calendar: { backgroundColor: c.calendarSurface, paddingHorizontal: theme.spacing.sm, paddingVertical: theme.spacing.xs },
     checkin: { marginTop: theme.spacing.sm, padding: theme.spacing.sm },
     checkinHeader: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, minHeight: theme.layout.touchTarget },
     date: { ...g.heading, fontSize: compact ? 19 : 22 },
     checkinPrompt: { fontFamily: theme.fonts.body, fontSize: compact ? 13 : 14, color: c.muted },
-    logToday: { paddingHorizontal: theme.spacing.sm },
     actions: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm },
     action: { ...g.outlineButton, flex: 1, paddingHorizontal: theme.spacing.xs },
     actionText: { color: c.text, fontSize: 13 },
