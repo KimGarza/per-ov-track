@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { createGlobalStyles, type Theme } from '@/constants/Theme';
 import { mixColor, dateKey, type CycleKind, type DateRange } from '@/utils/cycle';
 import { christianDays } from '@/utils/faith';
@@ -7,8 +7,9 @@ import { useAppTheme } from './ThemeProvider';
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export function DropMarker({ color, size }: { color: string; size?: number }) {
+  const { theme } = useAppTheme();
   return <View pointerEvents="none" accessible={false} testID="menstrual-drop" style={size ? { width: size, height: size } : StyleSheet.absoluteFill}>
-    <View style={{ position: 'absolute', width: '70%', height: '70%', left: '15%', top: '17%', backgroundColor: color,
+    <View style={theme.calendar.menstrualShape === 'circle' ? { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 100, backgroundColor: color } : { position: 'absolute', width: '70%', height: '70%', left: '15%', top: '17%', backgroundColor: color,
       borderTopLeftRadius: 2, borderTopRightRadius: 100, borderBottomLeftRadius: 100, borderBottomRightRadius: 100,
       transform: [{ rotate: '45deg' }] }} />
   </View>;
@@ -28,14 +29,17 @@ export function MonthNavigation({ month, onChange, onTitlePress, compact = false
   onUpdate?: () => void; cycleLabel?: string;
 }) {
   const { theme, styles: g } = useAppTheme();
+  const narrow = useWindowDimensions().width < 560;
   const s = useMemo(() => createStyles(theme), [theme]);
   const title = <Pressable accessibilityRole="button" accessibilityLabel={`${month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}, open calendar`} onPress={onTitlePress} disabled={!onTitlePress} style={s.monthTitle}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[s.month, compact && { fontSize: 28 }]}>{month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text></Pressable>;
   const previous = <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => onChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={s.arrow}><Text style={s.arrowText}>‹</Text></Pressable>;
   const next = <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => onChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={s.arrow}><Text style={s.arrowText}>›</Text></Pressable>;
   if (!onUpdate) return <View style={s.monthRow}>{previous}{title}{next}</View>;
+  const update = <Pressable accessibilityRole="button" accessibilityLabel="+ Update your cycle data" onPress={onUpdate} style={[g.outlineButton, { width: 108, backgroundColor: theme.colors.cycleAction, borderColor: theme.colors.cycleAction, borderRadius: theme.radius.pill }]}><Text style={{ color: theme.colors.onCycleAction, textAlign: 'center', fontSize: 12, fontWeight: '600' }}>Update cycle{ '\n' }data</Text></Pressable>;
+  const cycle = <Text numberOfLines={1} adjustsFontSizeToFit style={{ flex: 1, textAlign: 'center', color: theme.colors.text, fontSize: 13 }}>{cycleLabel}</Text>;
   return <>
-    <View style={[s.monthRow, { gap: theme.spacing.sm }]}>{title}<Pressable accessibilityRole="button" accessibilityLabel="+ Update your cycle data" onPress={onUpdate} style={[g.outlineButton, { width: 108, backgroundColor: theme.colors.cycleAction, borderColor: theme.colors.cycleAction, borderRadius: theme.radius.pill }]}><Text style={{ color: theme.colors.onCycleAction, textAlign: 'center', fontSize: 12, fontWeight: '600' }}>Update cycle{ '\n' }data</Text></Pressable></View>
-    <View style={s.monthRow}>{previous}<Text style={{ flex: 1, textAlign: 'center', color: theme.colors.text, fontSize: 13 }}>{cycleLabel}</Text>{next}</View>
+    <View style={[s.monthRow, { gap: theme.spacing.sm }]}>{!narrow && <View style={{ width: 108 }} />}{title}{!narrow && update}</View>
+    <View style={s.monthRow}>{previous}{cycle}{next}{narrow && update}</View>
   </>;
 }
 export function CalendarGrid({ month, today, days, selected, range, previewKind, predictedDays = {}, pendingDays = {}, onSelect, rowHeight = 60 }: {

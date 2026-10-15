@@ -79,6 +79,11 @@ export default function HomeScreen() {
           <CalendarLegend compact />
           {showSample && <Pressable accessibilityRole="button" accessibilityLabel="Hide sample calendar" onPress={() => setSampleDismissed(true)}><Text style={{ color: theme.colors.muted, fontSize: 11, textAlign: 'center' }}>Sample colors only · Add your dates above · Hide</Text></Pressable>}
         </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><ThemeFloralAccent />
+          <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
+          <Text style={[g.body, { fontFamily: theme.fonts.heading, fontSize: 22, lineHeight: 28 }]}>{dailyVerse(today).text}</Text>
+          <Text style={s.savedPreview}>{dailyVerse(today).reference} · KJV · Tap to reflect</Text>
+        </Pressable>
         <View style={[g.card, s.checkin]}>
           <View style={s.checkinHeader}>
             <Pressable accessibilityRole="button" accessibilityLabel="Edit daily check-in" onPress={() => openDay(selected)} style={{ flex: 1 }}>
@@ -96,11 +101,6 @@ export default function HomeScreen() {
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
           {([{ label: 'Insights', panel: 'insights' }, { label: 'Faith', panel: 'faith' }, { label: 'Journal', panel: 'journal' }] as const).map(item => <Pressable key={item.panel} accessibilityRole="button" accessibilityLabel={`Open ${item.label.toLowerCase()}`} onPress={() => openPanel(item.panel)} style={[g.outlineButton, { flex: 1, backgroundColor: theme.colors.surface }]}><Text style={{ color: theme.colors.text, fontSize: 13 }}>{item.label}</Text></Pressable>)}
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><ThemeFloralAccent />
-          <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
-          <Text style={[g.body, { fontFamily: theme.fonts.heading, fontSize: 22, lineHeight: 28 }]}>{dailyVerse(today).text}</Text>
-          <Text style={s.savedPreview}>{dailyVerse(today).reference} · KJV · Tap to reflect</Text>
-        </Pressable>
         <View style={{ marginTop: theme.spacing.md }}><IllustrationPlaceholder /></View>
         <View style={[g.card, { marginTop: theme.spacing.md, backgroundColor: theme.colors.roseWash }]}><Text style={[g.heading, { fontSize: 25 }]}>Different seasons, same God.</Text><Text style={g.body}>A quiet moment to notice your heart and begin again with grace.</Text></View>
       </>}
