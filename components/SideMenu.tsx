@@ -26,10 +26,11 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
   const openPanel = useCallback((value: PrimaryPanel) => { setOpen(false); setPanel(value); }, []);
   const items = [{ label: 'Themes', icon: '✿', id: 'themes' }, { label: 'Settings', icon: '⚙', id: 'settings' }, { label: 'Billing', icon: '▤', id: 'billing' }, { label: 'Subscription', icon: '♡', id: 'subscription' }] as const;
   const inactive = open || !!panel || externalOverlay;
+  const softenCalendar = !!panel || externalOverlay;
   const nativeBlur = Platform.OS === 'android' && Number(Platform.Version) >= 31;
   return <MenuContext.Provider value={{ openMenu: () => setOpen(true), openPanel, setExternalOverlay }}>
     <View style={{ flex: 1 }}>
-      <View style={{ flex: 1, filter: inactive ? (Platform.OS === 'web' ? 'blur(6px)' : nativeBlur ? [{ blur: 6 }] : undefined) : undefined, opacity: inactive && Platform.OS !== 'web' && !nativeBlur ? 0.45 : 1 }} accessibilityElementsHidden={inactive} importantForAccessibility={inactive ? 'no-hide-descendants' : 'auto'}>{children}</View>
+      <View style={{ flex: 1, filter: softenCalendar ? (Platform.OS === 'web' ? 'blur(6px)' : nativeBlur ? [{ blur: 6 }] : undefined) : undefined, opacity: softenCalendar && Platform.OS !== 'web' && !nativeBlur ? 0.45 : 1 }} accessibilityElementsHidden={inactive} importantForAccessibility={inactive ? 'no-hide-descendants' : 'auto'}>{children}</View>
     </View>
     <Modal visible={open || !!panel} transparent animationType="fade" onRequestClose={() => { if (themeAnchor) setThemeAnchor(null); else { setOpen(false); setPanel(null); } }}>
       <View style={{ flex: 1 }}>

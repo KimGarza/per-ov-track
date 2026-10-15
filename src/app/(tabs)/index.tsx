@@ -102,7 +102,6 @@ export default function HomeScreen() {
           <Text style={s.savedPreview}>{dailyVerse(today).reference} · KJV · Tap to reflect</Text>
         </Pressable>
         <View style={{ marginTop: theme.spacing.md }}><IllustrationPlaceholder /></View>
-        <View style={[g.card, { marginTop: theme.spacing.md, backgroundColor: theme.colors.roseWash }]}><Text style={[g.heading, { fontSize: 25 }]}>Different seasons, same God.</Text><Text style={g.body}>A quiet moment to notice your heart and begin again with grace.</Text></View>
       </>}
     </ScrollView>
     </View>
