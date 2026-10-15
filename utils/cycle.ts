@@ -1,11 +1,13 @@
 export type CycleKind = 'menstrual' | 'ovulation';
 export type JournalEntry = { mood: string; symptoms: string; notes: string };
+export type DiaryStyle = { font: 'theme' | 'CormorantGaramond' | 'SpaceMono' | 'system'; ink: 'text' | 'rose' | 'olive'; highlight: 'none' | 'rose' | 'sage' };
 export type ReflectionEntry = { pattern: string; action: string; completed: string[] };
 export type CycleData = {
   version: 1;
   days: Record<string, CycleKind>;
   journal: Record<string, JournalEntry>;
   pendingDays?: Record<string, true>;
+  diaryStyles?: Record<string, DiaryStyle>;
   diary?: Record<string, string>;
   reflections?: Record<string, ReflectionEntry>;
 };
@@ -87,6 +89,13 @@ export function readCycleData(value: string): CycleData {
     const pending: Record<string, true> = {};
     for (const day of Object.keys(data.days)) if (day > today) pending[day] = true;
     if (Object.keys(pending).length) data.pendingDays = pending;
+  }
+  if (data.diaryStyles) {
+    if (typeof data.diaryStyles !== 'object' || Array.isArray(data.diaryStyles)) throw new Error('Invalid diary styles');
+    for (const [day, style] of Object.entries(data.diaryStyles)) {
+      parseDate(day);
+      if (!style || !['theme', 'CormorantGaramond', 'SpaceMono', 'system'].includes(style.font) || !['text', 'rose', 'olive'].includes(style.ink) || !['none', 'rose', 'sage'].includes(style.highlight)) throw new Error('Invalid diary style');
+    }
   }
   if (data.diary) {
     if (typeof data.diary !== 'object' || Array.isArray(data.diary)) throw new Error('Invalid diary');

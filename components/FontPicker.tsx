@@ -1,8 +1,0 @@
-import { Pressable, Text, View } from 'react-native';
-import { designTokens } from '@/constants/Theme';
-import { useAppTheme } from './ThemeProvider';
-export function FontPicker() {
-  const { theme, styles: g, setFont } = useAppTheme();
-  const options = [{ label: 'Cormorant Garamond', value: 'CormorantGaramond' }, { label: 'Space Mono', value: 'SpaceMono' }, { label: 'System', value: designTokens.fonts.body ?? 'System' }];
-  return <View style={{ gap: 12, marginTop: 16 }}><Text style={[g.heading, { fontSize: 28 }]}>Try fonts in this theme</Text><Text style={g.body}>Font choices stay separate for each theme during this session.</Text>{(['heading', 'body', 'journal'] as const).map(slot => <View key={slot} style={{ gap: 8 }}><Text style={{ color: theme.colors.text, fontWeight: '600' }}>{slot === 'heading' ? 'Headings' : slot === 'body' ? 'Body text' : 'Journal pages'}</Text><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{options.map(option => <Pressable accessibilityRole="button" key={option.value} accessibilityLabel={`${slot}: ${option.label}`} accessibilityState={{ selected: theme.fonts[slot] === option.value }} onPress={() => setFont(slot, option.value)} style={[g.outlineButton, { backgroundColor: theme.fonts[slot] === option.value ? theme.colors.roseWash : theme.colors.surface }]}><Text style={{ color: theme.colors.text, fontFamily: option.value, fontSize: 14 }}>{option.label}</Text></Pressable>)}</View></View>)}<Text style={[g.heading, { fontSize: 27 }]}>Crimson Rhythm</Text><Text style={g.body}>A little grace for every day.</Text><Text style={{ fontFamily: theme.fonts.journal, color: theme.colors.text, fontSize: 20 }}>Dear diary, today I noticed…</Text></View>;
-}

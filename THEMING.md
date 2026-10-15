@@ -89,3 +89,11 @@ Themes have independent heading/body/journal font slots. CormorantGaramond and S
 The book icon next to the prayer icon opens a lined diary with a spine, lightweight sunlight bands and reduced-motion-aware page turns. Entries save locally by date in `diary`, separate from cycle check-in notes. Saving occurs before turning/closing; a failed save keeps the current page and text open. The optional diary/pending fields remain compatible with older records.
 
 The newly introduced expo-blur dependency has been removed to avoid a native-module requirement for the shell. The existing calendar uses a built-in blur filter on web/Android 12+, with a dimmed fallback on iOS/older Android. Primary overlays continue working without an additional native package; native devices still require validation.
+
+## Compact appearance menu and journal toolbar
+
+Themes now opens a small anchored pop-out beside/below the sidebar control, with only registered theme names. Choosing a name closes it; clicking outside dismisses it. Font customization was removed from Themes.
+
+The journal contains a small pill toolbar for Font, Color and Highlight. Each opens the shared bounded option popover, dismissible by selecting an option, clicking away or Android Back. Font/ink/page-highlight choices are saved per diary date in `diaryStyles` alongside the text and restored on page turns/reopening. Highlight applies a page-wide blush/sage wash; this is not selected-text rich-text highlighting. All inks and washes use existing theme tokens. Older plain-string diary entries remain compatible.
+
+Today's marker is a sibling below the date button, with reserved vertical clearance so the date border cannot cover it. Settings offers Circle and Heart variants (session preference), and the legend follows the choice. No existing palette literals were changed.

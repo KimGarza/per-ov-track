@@ -36,7 +36,7 @@ export function CalendarGrid({ month, today, days, selected, range, previewKind,
   predictedDays?: Record<string, CycleKind>; pendingDays?: Record<string, true>; month: Date; today: string; days: Record<string, CycleKind>; selected?: string;
   range?: DateRange; previewKind?: CycleKind | null; onSelect: (key: string) => void; rowHeight?: number;
 }) {
-  const { theme } = useAppTheme();
+  const { theme, todayMarker } = useAppTheme();
   const s = useMemo(() => createStyles(theme), [theme]);
   const c = theme.colors;
   const holidays = useMemo(() => christianDays(month.getFullYear()), [month]);
@@ -56,10 +56,10 @@ export function CalendarGrid({ month, today, days, selected, range, previewKind,
       const isToday = key === today;
       const markerColor = kind === 'menstrual' ? c.todayPeriod : kind === 'ovulation' ? c.todayFertile : c.today;
       const label = [new Date(month.getFullYear(), month.getMonth(), day).toDateString(), isToday && 'Today', kind === 'menstrual' && 'Menstrual', estimated && 'Unconfirmed estimate', kind === 'ovulation' && 'Ovulation', inRange && 'In selected range', holidays[key]?.name].filter(Boolean).join(', ');
-      return <View key={key} style={[s.cell, { height: rowHeight }]}>
+      return <View key={key} style={[s.cell, { height: rowHeight }, isToday && { paddingBottom: 8 }]}>
         <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: inRange || key === selected }} onPress={() => onSelect(key)} style={[
           s.day,
-          { maxWidth: Math.min(56, rowHeight - 4) },
+          { maxWidth: Math.min(56, rowHeight - (isToday ? 12 : 4)) },
           kind === 'menstrual' && { backgroundColor: displayFill, borderRadius: 100 },
 
           (key === selected || inRange) && { borderWidth: 1.5, borderColor: kind === 'menstrual' ? c.todayPeriod : kind === 'ovulation' ? c.todayFertile : c.calendarText },
@@ -67,21 +67,21 @@ export function CalendarGrid({ month, today, days, selected, range, previewKind,
         ]}>
           {kind === 'ovulation' && <FlowerMarker color={displayFill} />}
           {holidays[key] && <Text accessible={false} style={{ position: 'absolute', top: 1, right: 2, color: c.today, fontSize: 10 }}>✝</Text>}
-          <Text style={[s.dayText, rowHeight < 50 && { fontSize: 17 }, isToday && { color: markerColor, fontSize: rowHeight < 44 ? 15 : 19 }]}>{day}</Text>
+          <Text style={[s.dayText, rowHeight < 50 && { fontSize: 17 }, isToday && { color: markerColor, fontSize: rowHeight < 44 ? 13 : 19 }]}>{day}</Text>
           {kind === 'menstrual' && <SymbolView name={{ ios: 'drop.fill', android: 'water_drop', web: 'water_drop' }} tintColor={c.todayPeriod} size={rowHeight < 44 ? 9 : 12} />}
-          {isToday && <View accessible={false} style={{ position: 'absolute', bottom: -5, width: 5, height: 5, borderRadius: 3, backgroundColor: c.calendarText }} />}
 
         </Pressable>
+        {isToday && <View testID="today-marker" pointerEvents="none" accessible={false} style={{ position: 'absolute', bottom: -1, alignItems: 'center', justifyContent: 'center', height: 8 }}>{todayMarker === 'heart' ? <Text style={{ color: c.todayPeriod, fontSize: 10, lineHeight: 10 }}>♥</Text> : <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.calendarText }} />}</View>}
       </View>;
     })}</View>
   </>;
 }
 export function CalendarLegend({ compact = false }: { compact?: boolean }) {
-  const { theme } = useAppTheme();
+  const { theme, todayMarker } = useAppTheme();
   const s = useMemo(() => createStyles(theme), [theme]);
   return <View style={[s.legend, compact && { paddingTop: 4, marginTop: 4, gap: 12 }]}>
     {([['Menstrual', theme.colors.calendarPeriod], ['Ovulation', theme.colors.calendarFertile]] as const).map(([label, color]) => <View key={label} style={s.legendItem}>{label === 'Ovulation' ? <FlowerMarker color={color} size={15} /> : <View style={[s.dot, { backgroundColor: color }]} />}<Text style={s.legendText}>{label}</Text></View>)}
-    <View style={s.legendItem}><View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.calendarText }} /><Text style={s.legendText}>Today</Text></View>
+    <View style={s.legendItem}>{todayMarker === 'heart' ? <Text style={{ color: theme.colors.todayPeriod, fontSize: 12 }}>♥</Text> : <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.calendarText }} />}<Text style={s.legendText}>Today</Text></View>
   </View>;
 }
 const createStyles = (theme: Theme) => {

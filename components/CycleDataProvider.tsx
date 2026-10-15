@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
-import { applyLoggedRange, dateKey, emptyCycleData, parseDate, readCycleData, type CycleData, type CycleKind, type JournalEntry, type ReflectionEntry } from '@/utils/cycle';
+import { applyLoggedRange, dateKey, emptyCycleData, parseDate, readCycleData, type DiaryStyle, type CycleData, type CycleKind, type JournalEntry, type ReflectionEntry } from '@/utils/cycle';
 
 const storageKey = 'crimson-rhythm:cycle-data:v1';
 function useCycleState() {
@@ -47,9 +47,9 @@ function useCycleState() {
     const key = dateKey(parseDate(day));
     return commit(previous => ({ ...previous, reflections: { ...previous.reflections, [key]: entry } }));
   }, [commit]);
-  const saveDiary = useCallback((day: string, entry: string) => {
+  const saveDiary = useCallback((day: string, entry: string, style?: DiaryStyle) => {
     const key = dateKey(parseDate(day));
-    return commit(previous => ({ ...previous, diary: { ...previous.diary, [key]: entry } }));
+    return commit(previous => ({ ...previous, diary: { ...previous.diary, [key]: entry }, ...(style ? { diaryStyles: { ...previous.diaryStyles, [key]: style } } : {}) }));
   }, [commit]);
   return { data, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
