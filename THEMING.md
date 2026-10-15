@@ -69,3 +69,11 @@ The Grace & Bloom palette uses the requested tan-pink page background and coral 
 The home month header now contains the Update cycle data pill. `cycleAction` and `onCycleAction` provide independent pink palettes with readable text. Month headings are two points larger. Navigation arrows and cycle context sit just beneath that row. Ovulation date markers and the legend use the shared five-petal `FlowerMarker` with the existing fertile color; menstrual squares and today/selection indicators remain readable. The same marker renderer is used in range selection.
 
 Daily check-in offers Typing and Voice memo modes. Voice memo is an explicitly labeled prototype with a fixed sample transcript and sample AI summary; it records nothing and makes no AI calls. The sample is only placed into notes after the user selects the explicit sample-copy action and is saved through the normal check-in flow.
+
+## Calendar-first overlays
+
+The calendar is the primary screen. The side menu only contains Themes, Settings, Billing and Subscription. These open a shared large primary modal; Insights, Faith and Journal open the same modal from shortcuts below the check-in. The underlying calendar remains mounted, preserving its selected date, displayed month and scroll position. Themes close after selecting a palette. Billing and Subscription are explicit unconnected placeholders with no checkout or fabricated account status.
+
+`SideMenuProvider` hosts the shared menu/modal state. The drawer and primary content share one native Modal to avoid overlapping dismissal/presentation transitions. `EditSheet` supports an embedded primary presentation with the same close, back, keyboard and scroll behavior as editors. `expo-blur` wraps the calendar in a BlurTargetView, and renders a sibling BlurView behind the modal (including Android's explicit target). Legacy Insights/Faith/Journal URLs redirect into the calendar with the corresponding modal open.
+
+Insights and Journal content now live outside the route tree as reusable components. Existing local check-ins, guidance, goals and the voice preview remain available within overlays.
