@@ -24,17 +24,17 @@ function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar'], decorat
 }
 export const themes = {
   grace: defineTheme({
-    background: '#E9D7C9', surface: '#FFF7F1', calendarSurface: '#FFFAF6', text: '#422E28', muted: '#71534B', placeholder: '#A4867B',
-    calendarPeriod: '#E6A6A1', calendarFertile: '#CCD7B9', calendarText: '#422E28', today: '#9A763A', todayPeriod: '#843E4C', todayFertile: '#52613A', overlay: '#422E2866',
+    background: '#e89791', surface: '#eedada', calendarSurface: '#fff6f6', text: '#2d0b0b', muted: '#351310', placeholder: '#A4867B',
+    calendarPeriod: 'rgb(240, 108, 115)', calendarFertile: '#a9d2a0', calendarText: '#2d0b0b', today: '#9A763A', todayPeriod: '#2d0b0b', todayFertile: '#358042', overlay: '#422E2866',
     onBackground: '#422E28', mutedOnBackground: '#71534B', accentOnBackground: '#A55552',
-    cycleAction: '#F2AAA9', onCycleAction: '#59232F', rose: '#AD5D58', roseSoft: '#EDB6AC', roseWash: '#F7DDD4', sage: '#CCD7B9', olive: '#7D8967',
+    cycleAction: '#f7beb9', onCycleAction: '#59232F', rose: '#AD5D58', roseSoft: '#EDB6AC', roseWash: '#F7DDD4', sage: '#CCD7B9', olive: '#7D8967',
     onPeriod: '#422E28', onFertile: '#422E28', mutedOnFertile: '#71534B',
     border: '#DEC1B2', backgroundBorder: '#DEC1B2', white: '#FFF7F1', shadow: '#816650',
     botanicalBorder: '#BAA18A', botanicalCenter: '#BC8C69',
   }, 'dark', 'botanical'),
   petal: defineTheme({
-    background: '#FAEDF1', surface: '#FFF8FA', calendarSurface: '#FFF5F8', text: '#36201B', muted: '#574137', placeholder: '#997F79',
-    calendarPeriod: '#EAB7C6', calendarFertile: '#D9DEC2', calendarText: '#36201B', today: '#946723', todayPeriod: '#8B3543', todayFertile: '#43562D', overlay: '#36201B66',
+    background: '#FAEDF1', surface: '#FFF8FA', calendarSurface: '#FFF5F8', text: '#341610', muted: '#5b3128', placeholder: '#997F79',
+    calendarPeriod: '#eab7b7', calendarFertile: '#D9DEC2', calendarText: '#36201B', today: '#946723', todayPeriod: '#8B3543', todayFertile: '#43562D', overlay: '#36201B66',
     onBackground: '#36201B', mutedOnBackground: '#574137', accentOnBackground: '#B76E86',
     cycleAction: '#F0ACC6', onCycleAction: '#542536', rose: '#B76E86', roseSoft: '#ECC0CC', roseWash: '#F7DDE5', sage: '#D9DEC2', olive: '#858C67',
     onPeriod: '#36201B', onFertile: '#36201B', mutedOnFertile: '#635442',
