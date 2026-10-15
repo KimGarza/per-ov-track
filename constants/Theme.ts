@@ -31,7 +31,7 @@ export const themes = {
     onPeriod: '#422E28', onFertile: '#422E28', mutedOnFertile: '#71534B',
     border: '#DEC1B2', backgroundBorder: '#DEC1B2', white: '#FFF7F1', shadow: '#816650',
     botanicalBorder: '#BAA18A', botanicalCenter: '#BC8C69',
-  }, 'dark', 'botanical', { ...designTokens.fonts, journal: 'CormorantGaramond' }),
+  }, 'dark', 'botanical', { heading: 'Rye', body: 'Rye', journal: 'CormorantGaramond' }),
   petal: defineTheme({
     background: '#FAEDF1', surface: '#FFF8FA', calendarSurface: '#FFF5F8', text: '#341610', muted: '#5b3128', placeholder: '#997F79',
     calendarPeriod: '#eab7b7', calendarFertile: '#D9DEC2', calendarText: '#36201B', today: '#946723', todayPeriod: '#8B3543', todayFertile: '#43562D', overlay: '#36201B66',
