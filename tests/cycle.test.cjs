@@ -88,3 +88,12 @@ test('diary entries and pending dates round trip and reject malformed data', () 
   assert.throws(() => readCycleData(JSON.stringify({ ...data, pendingDays: { '2026-10-16': false } })));
   assert.equal(exportsObject.mixColor('rgb(240, 108, 115)', '#fff6f6'), 'rgb(247, 174, 178)');
 });
+
+test('journal page typography, ink and highlight round trip with validation', () => {
+  const data = emptyCycleData();
+  data.diary = { '2026-10-15': 'A page with color.' };
+  data.diaryStyles = { '2026-10-15': { font: 'SpaceMono', ink: 'rose', highlight: 'sage' } };
+  assert.deepEqual(plain(readCycleData(JSON.stringify(data)).diaryStyles), data.diaryStyles);
+  data.diaryStyles['2026-10-15'].font = 'missing-font';
+  assert.throws(() => readCycleData(JSON.stringify(data)));
+});
