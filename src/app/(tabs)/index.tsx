@@ -1,6 +1,8 @@
+import { router, useLocalSearchParams } from 'expo-router';
+import { panelTitles, type PrimaryPanel } from '@/components/PrimaryPanels';
 import { IllustrationPlaceholder } from '@/components/IllustrationPlaceholder';
-import { MenuButton } from '@/components/SideMenu';
-import { useMemo, useState } from 'react';
+import { MenuButton, usePrimaryPanel } from '@/components/SideMenu';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FaithBackdrop, ThemeFloralAccent } from '@/components/FaithBackdrop';
@@ -18,6 +20,14 @@ import { cycleDay, dateKey, parseDate, type JournalEntry, type CycleKind } from 
 type Editor = { type: 'cycle'; calendarFirst: boolean } | { type: 'day'; day: string; field?: keyof JournalEntry } | null;
 export default function HomeScreen() {
   const { theme, styles: g } = useAppTheme();
+  const openPanel = usePrimaryPanel();
+  const { panel } = useLocalSearchParams<{ panel?: string }>();
+  useEffect(() => {
+    if (panel && Object.prototype.hasOwnProperty.call(panelTitles, panel)) {
+      openPanel(panel as PrimaryPanel);
+      router.setParams({ panel: undefined });
+    }
+  }, [panel, openPanel]);
   const { data, ready, error, retry } = useCycleData();
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -80,6 +90,9 @@ export default function HomeScreen() {
           </Pressable>)}</View>}
           {!compact && !journal && <Text style={[s.savedPreview, { fontStyle: 'italic', color: theme.colors.placeholder }]}>e.g. calm, irritable, emotional…</Text>}
           {!compact && journal && <Text numberOfLines={1} style={s.savedPreview}>{[journal.mood && `Mood: ${journal.mood}`, journal.symptoms, journal.notes].filter(Boolean).join(' · ')}</Text>}
+        </View>
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+          {([{ label: 'Insights', panel: 'insights' }, { label: 'Faith', panel: 'faith' }, { label: 'Journal', panel: 'journal' }] as const).map(item => <Pressable key={item.panel} accessibilityRole="button" accessibilityLabel={`Open ${item.label.toLowerCase()}`} onPress={() => openPanel(item.panel)} style={[g.outlineButton, { flex: 1, backgroundColor: theme.colors.surface }]}><Text style={{ color: theme.colors.text, fontSize: 13 }}>{item.label}</Text></Pressable>)}
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><ThemeFloralAccent />
           <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
