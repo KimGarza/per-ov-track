@@ -1,6 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { Rye_400Regular } from '@expo-google-fonts/rye';
 import { Stack, DefaultTheme, ThemeProvider } from 'expo-router';
 import { CycleDataProvider } from '@/components/CycleDataProvider';
 import { AppThemeProvider, useAppTheme } from '@/components/ThemeProvider';
@@ -25,7 +24,6 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    Rye: Rye_400Regular,
     SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
     CormorantGaramond: require('../../assets/fonts/CormorantGaramond.ttf'),
   });
