@@ -6,7 +6,7 @@ export const designTokens = {
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
   radius: { xs: 4, sm: 12, calendarDay: 10, card: 26, pill: 100 },
   layout: { maxWidth: 720, gutter: 16, touchTarget: 44, tabBarHeight: 68 },
-  calendar: { minRowHeight: 35, maxRowHeight: 80, defaultRowHeight: 60, chromeHeight: 144, headerHeight: 52, checkinHeight: 120 },
+  calendar: { menstrualShape: 'drop' as 'drop' | 'circle', minRowHeight: 35, maxRowHeight: 80, defaultRowHeight: 60, chromeHeight: 144, headerHeight: 52, checkinHeight: 120 },
 };
 export type ThemeColors = {
   background: string; surface: string; calendarSurface: string; text: string; muted: string; placeholder: string;
