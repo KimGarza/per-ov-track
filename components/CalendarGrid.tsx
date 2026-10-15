@@ -1,12 +1,18 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import { createGlobalStyles, type Theme } from '@/constants/Theme';
 import { mixColor, dateKey, type CycleKind, type DateRange } from '@/utils/cycle';
 import { christianDays } from '@/utils/faith';
 import { useAppTheme } from './ThemeProvider';
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export function DropMarker({ color, size }: { color: string; size?: number }) {
+  return <View pointerEvents="none" accessible={false} testID="menstrual-drop" style={size ? { width: size, height: size } : StyleSheet.absoluteFill}>
+    <View style={{ position: 'absolute', width: '70%', height: '70%', left: '15%', top: '17%', backgroundColor: color,
+      borderTopLeftRadius: 2, borderTopRightRadius: 100, borderBottomLeftRadius: 100, borderBottomRightRadius: 100,
+      transform: [{ rotate: '45deg' }] }} />
+  </View>;
+}
 export function FlowerMarker({ color, size }: { color: string; size?: number }) {
   return <View pointerEvents="none" accessible={false} style={size ? { width: size, height: size } : StyleSheet.absoluteFill}>
     {Array.from({ length: 5 }, (_, index) => {
@@ -60,15 +66,14 @@ export function CalendarGrid({ month, today, days, selected, range, previewKind,
         <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: inRange || key === selected }} onPress={() => onSelect(key)} style={[
           s.day,
           { maxWidth: Math.min(56, rowHeight - (isToday ? 12 : 4)) },
-          kind === 'menstrual' && { backgroundColor: displayFill, borderRadius: 100 },
 
           (key === selected || inRange) && { borderWidth: 1.5, borderColor: kind === 'menstrual' ? c.todayPeriod : kind === 'ovulation' ? c.todayFertile : c.calendarText },
           isToday && { borderWidth: 2, borderColor: markerColor, borderRadius: 100 },
         ]}>
+          {kind === 'menstrual' && <DropMarker color={displayFill} />}
           {kind === 'ovulation' && <FlowerMarker color={displayFill} />}
           {holidays[key] && <Text accessible={false} style={{ position: 'absolute', top: 1, right: 2, color: c.today, fontSize: 10 }}>✝</Text>}
           <Text style={[s.dayText, rowHeight < 50 && { fontSize: 17 }, isToday && { color: markerColor, fontSize: rowHeight < 44 ? 13 : 19 }]}>{day}</Text>
-          {kind === 'menstrual' && <SymbolView name={{ ios: 'drop.fill', android: 'water_drop', web: 'water_drop' }} tintColor={c.todayPeriod} size={rowHeight < 44 ? 9 : 12} />}
 
         </Pressable>
         {isToday && <View testID="today-marker" pointerEvents="none" accessible={false} style={{ position: 'absolute', bottom: -1, alignItems: 'center', justifyContent: 'center', height: 8 }}>{todayMarker === 'heart' ? <Text style={{ color: c.todayPeriod, fontSize: 10, lineHeight: 10 }}>♥</Text> : <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.calendarText }} />}</View>}
@@ -80,7 +85,7 @@ export function CalendarLegend({ compact = false }: { compact?: boolean }) {
   const { theme, todayMarker } = useAppTheme();
   const s = useMemo(() => createStyles(theme), [theme]);
   return <View style={[s.legend, compact && { paddingTop: 4, marginTop: 4, gap: 12 }]}>
-    {([['Menstrual', theme.colors.calendarPeriod], ['Ovulation', theme.colors.calendarFertile]] as const).map(([label, color]) => <View key={label} style={s.legendItem}>{label === 'Ovulation' ? <FlowerMarker color={color} size={15} /> : <View style={[s.dot, { backgroundColor: color }]} />}<Text style={s.legendText}>{label}</Text></View>)}
+    {([['Menstrual', theme.colors.calendarPeriod], ['Ovulation', theme.colors.calendarFertile]] as const).map(([label, color]) => <View key={label} style={s.legendItem}>{label === 'Ovulation' ? <FlowerMarker color={color} size={15} /> : <DropMarker color={color} size={15} />}<Text style={s.legendText}>{label}</Text></View>)}
     <View style={s.legendItem}>{todayMarker === 'heart' ? <Text style={{ color: theme.colors.todayPeriod, fontSize: 12 }}>♥</Text> : <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.calendarText }} />}<Text style={s.legendText}>Today</Text></View>
   </View>;
 }
