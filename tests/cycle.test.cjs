@@ -66,3 +66,25 @@ test('saved data restores check-ins and rejects invalid records', () => {
   assert.throws(() => readCycleData(JSON.stringify({ ...data, days: { '2026-10-14': 'invalid' } })));
   assert.throws(() => readCycleData(JSON.stringify({ ...data, journal: { '2026-10-14': { mood: 42 } } })));
 });
+
+test('future plans remain unconfirmed after their date until explicitly logged', () => {
+  const { applyLoggedRange } = exportsObject;
+  const planned = applyLoggedRange(emptyCycleData(), 'menstrual', '2026-10-15', '2026-10-17', '2026-10-14');
+  assert.equal(planned.pendingDays['2026-10-15'], true);
+  assert.equal(cycleDay(planned, '2026-10-16'), null);
+  const confirmed = applyLoggedRange(planned, 'menstrual', '2026-10-15', '2026-10-15', '2026-10-16');
+  assert.equal(confirmed.pendingDays['2026-10-15'], undefined);
+  assert.equal(confirmed.pendingDays['2026-10-16'], true);
+  assert.equal(cycleDay(confirmed, '2026-10-16'), 2);
+  const cleared = applyLoggedRange(confirmed, null, '2026-10-16', '2026-10-17', '2026-10-16');
+  assert.equal(cleared.pendingDays['2026-10-16'], undefined);
+});
+test('diary entries and pending dates round trip and reject malformed data', () => {
+  const data = emptyCycleData();
+  data.diary = { '2026-10-15': 'A little sunlight today.' };
+  data.days['2026-10-16'] = 'ovulation'; data.pendingDays = { '2026-10-16': true };
+  assert.equal(readCycleData(JSON.stringify(data)).diary['2026-10-15'], 'A little sunlight today.');
+  assert.throws(() => readCycleData(JSON.stringify({ ...data, diary: { '2026-10-15': 42 } })));
+  assert.throws(() => readCycleData(JSON.stringify({ ...data, pendingDays: { '2026-10-16': false } })));
+  assert.equal(exportsObject.mixColor('rgb(240, 108, 115)', '#fff6f6'), 'rgb(247, 174, 178)');
+});

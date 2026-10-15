@@ -1,12 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, ScrollView, Text, View } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { Animated, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BlurTargetView, BlurView } from 'expo-blur';
 import { EditSheet } from './EditSheet';
 import { PrimaryPanels, panelTitles, type PrimaryPanel } from './PrimaryPanels';
 import { useAppTheme } from './ThemeProvider';
 
-const MenuContext = createContext<{ openMenu: () => void; openPanel: (panel: PrimaryPanel) => void }>({ openMenu: () => {}, openPanel: () => {} });
+const MenuContext = createContext<{ openMenu: () => void; openPanel: (panel: PrimaryPanel) => void; setExternalOverlay: (active: boolean) => void }>({ openMenu: () => {}, openPanel: () => {}, setExternalOverlay: () => {} });
+export const useCalendarOverlay = () => useContext(MenuContext).setExternalOverlay;
 export const usePrimaryPanel = () => useContext(MenuContext).openPanel;
 export function MenuButton() {
   const { openMenu: open } = useContext(MenuContext);
@@ -14,18 +14,19 @@ export function MenuButton() {
   return <Pressable accessibilityRole="button" accessibilityLabel="Open navigation menu" onPress={open} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24, color: theme.colors.onBackground }}>☰</Text></Pressable>;
 }
 export function SideMenuProvider({ children }: { children: ReactNode }) {
+  const [externalOverlay, setExternalOverlay] = useState(false);
   const [open, setOpen] = useState(false);
   const [slide] = useState(() => new Animated.Value(-320));
   useEffect(() => { if (open) { slide.setValue(-320); Animated.timing(slide, { toValue: 0, duration: 220, useNativeDriver: true }).start(); } }, [open, slide]);
   const { theme, styles: g } = useAppTheme();
   const [panel, setPanel] = useState<PrimaryPanel | null>(null);
-  const targetRef = useRef<View | null>(null);
   const openPanel = useCallback((value: PrimaryPanel) => { setOpen(false); setPanel(value); }, []);
   const items = [{ label: 'Themes', icon: '✿', id: 'themes' }, { label: 'Settings', icon: '⚙', id: 'settings' }, { label: 'Billing', icon: '▤', id: 'billing' }, { label: 'Subscription', icon: '♡', id: 'subscription' }] as const;
-  return <MenuContext.Provider value={{ openMenu: () => setOpen(true), openPanel }}>
+  const inactive = open || !!panel || externalOverlay;
+  const nativeBlur = Platform.OS === 'android' && Number(Platform.Version) >= 31;
+  return <MenuContext.Provider value={{ openMenu: () => setOpen(true), openPanel, setExternalOverlay }}>
     <View style={{ flex: 1 }}>
-      <BlurTargetView ref={targetRef} style={{ flex: 1 }} accessibilityElementsHidden={open || !!panel} importantForAccessibility={open || panel ? 'no-hide-descendants' : 'auto'}>{children}</BlurTargetView>
-      {(open || panel) && <BlurView pointerEvents="none" blurTarget={targetRef} blurMethod="dimezisBlurView" tint={theme.statusBar === 'light' ? 'dark' : 'light'} intensity={35} style={StyleSheet.absoluteFill} />}
+      <View style={{ flex: 1, filter: inactive ? (Platform.OS === 'web' ? 'blur(6px)' : nativeBlur ? [{ blur: 6 }] : undefined) : undefined, opacity: inactive && Platform.OS !== 'web' && !nativeBlur ? 0.45 : 1 }} accessibilityElementsHidden={inactive} importantForAccessibility={inactive ? 'no-hide-descendants' : 'auto'}>{children}</View>
     </View>
     <Modal visible={open || !!panel} transparent animationType="fade" onRequestClose={() => { setOpen(false); setPanel(null); }}>
       {panel ? <EditSheet embedded primary title={panelTitles[panel]} onClose={() => setPanel(null)}><PrimaryPanels panel={panel} onClose={() => setPanel(null)} onChange={setPanel} /></EditSheet> : (

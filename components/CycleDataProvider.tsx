@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
-import { applyRange, dateKey, emptyCycleData, parseDate, readCycleData, type CycleData, type CycleKind, type JournalEntry, type ReflectionEntry } from '@/utils/cycle';
+import { applyLoggedRange, dateKey, emptyCycleData, parseDate, readCycleData, type CycleData, type CycleKind, type JournalEntry, type ReflectionEntry } from '@/utils/cycle';
 
 const storageKey = 'crimson-rhythm:cycle-data:v1';
 function useCycleState() {
@@ -30,20 +30,28 @@ function useCycleState() {
     queue.current = operation.catch(() => {});
     return operation;
   }, [ready]);
-  const saveRange = useCallback((kind: CycleKind | null, start: string, end: string) => commit(previous => applyRange(previous, kind, start, end)), [commit]);
+  const saveRange = useCallback((kind: CycleKind | null, start: string, end: string) => commit(previous => applyLoggedRange(previous, kind, start, end, dateKey(new Date()))), [commit]);
   const saveJournal = useCallback((day: string, entry: JournalEntry) => {
     const key = dateKey(parseDate(day));
     return commit(previous => ({ ...previous, journal: { ...previous.journal, [key]: entry } }));
   }, [commit]);
-  const saveDay = useCallback((day: string, kind: CycleKind | null, entry: JournalEntry) => {
+  const saveDay = useCallback((day: string, kind: CycleKind | null, entry: JournalEntry, confirmed = true) => {
     const key = dateKey(parseDate(day));
-    return commit(previous => ({ ...applyRange(previous, kind, key, key), journal: { ...previous.journal, [key]: entry } }));
+    return commit(previous => {
+      const next = applyLoggedRange(previous, kind, key, key, dateKey(new Date()));
+      if (kind && !confirmed) next.pendingDays = { ...next.pendingDays, [key]: true };
+      return { ...next, journal: { ...previous.journal, [key]: entry } };
+    });
   }, [commit]);
   const saveReflection = useCallback((day: string, entry: ReflectionEntry) => {
     const key = dateKey(parseDate(day));
     return commit(previous => ({ ...previous, reflections: { ...previous.reflections, [key]: entry } }));
   }, [commit]);
-  return { data, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
+  const saveDiary = useCallback((day: string, entry: string) => {
+    const key = dateKey(parseDate(day));
+    return commit(previous => ({ ...previous, diary: { ...previous.diary, [key]: entry } }));
+  }, [commit]);
+  return { data, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
 const CycleContext = createContext<ReturnType<typeof useCycleState> | null>(null);
 export function CycleDataProvider({ children }: PropsWithChildren) {

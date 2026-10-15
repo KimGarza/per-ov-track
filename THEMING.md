@@ -77,3 +77,15 @@ The calendar is the primary screen. The side menu only contains Themes, Settings
 `SideMenuProvider` hosts the shared menu/modal state. The drawer and primary content share one native Modal to avoid overlapping dismissal/presentation transitions. `EditSheet` supports an embedded primary presentation with the same close, back, keyboard and scroll behavior as editors. `expo-blur` wraps the calendar in a BlurTargetView, and renders a sibling BlurView behind the modal (including Android's explicit target). Legacy Insights/Faith/Journal URLs redirect into the calendar with the corresponding modal open.
 
 Insights and Journal content now live outside the route tree as reusable components. Existing local check-ins, guidance, goals and the voice preview remain available within overlays.
+
+## Intentional palette edits, fonts and diary
+
+All existing palette color values were preserved from the user's latest dev edits. Main body/calendar lettering now uses the existing main text tokens rather than muted styles. Confirmed menstrual markings use a circle and drop; fertile markings use flowers. Today has a small dot below its date. Future plans and sample estimates use a lighter mix of that theme's cycle color and calendar surface. The original base colors are never overwritten.
+
+`pendingDays` records future manual plans so the passage of time cannot confirm them automatically. Logging a due/past marking explicitly confirms it; editing unrelated check-in text preserves pending status. Existing future records are migrated as pending on load. This is a display/confirmation model, not a new automatic cycle prediction algorithm. Sample markings remain clearly labeled sample data and are never stored as health records.
+
+Themes have independent heading/body/journal font slots. CormorantGaramond and SpaceMono are bundled and loaded through Expo Font; the third option is the platform's system font. Themes includes previews and per-slot controls; overrides remain isolated per theme for the session. Browse https://fonts.google.com/ for more families; additional TTF/OTF assets must be bundled and registered before adding them to the picker.
+
+The book icon next to the prayer icon opens a lined diary with a spine, lightweight sunlight bands and reduced-motion-aware page turns. Entries save locally by date in `diary`, separate from cycle check-in notes. Saving occurs before turning/closing; a failed save keeps the current page and text open. The optional diary/pending fields remain compatible with older records.
+
+The newly introduced expo-blur dependency has been removed to avoid a native-module requirement for the shell. The existing calendar uses a built-in blur filter on web/Android 12+, with a dimmed fallback on iOS/older Android. Primary overlays continue working without an additional native package; native devices still require validation.
