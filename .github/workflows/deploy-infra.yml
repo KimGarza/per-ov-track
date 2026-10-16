@@ -1,0 +1,74 @@
+name: Deploy dev network
+on:
+  push:
+    branches: [dev]
+    paths:
+      - '.github/workflows/deploy-infra.yml'
+      - 'infra/templates/network.yml'
+      - 'infra/overrides/dev/_global.json'
+      - 'infra/overrides/dev/network.json'
+      - 'scripts/infra/prepare-network.py'
+permissions:
+  contents: read
+concurrency:
+  group: per-ov-track-dev-network
+  cancel-in-progress: false
+jobs:
+  deploy-network:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DEPLOY_ENVIRONMENT: dev
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate configuration and merge global + network overrides
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$AWS_ROLE_ARN" ]]; then
+            echo '::error::Set AWS_ROLE_ARN in the GitHub dev environment before deployment.'
+            exit 1
+          fi
+          python scripts/infra/prepare-network.py --environment "$DEPLOY_ENVIRONMENT" --output "$RUNNER_TEMP/network-parameters.json"
+          stack_name=$(jq -r '.Environment + "-" + .AppName + "-network"' "$RUNNER_TEMP/network-parameters.json")
+          echo "STACK_NAME=$stack_name" >> "$GITHUB_ENV"
+      - name: Connect to AWS using GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: per-ov-track-network-${{ github.run_id }}
+      - name: Validate VPC template with CloudFormation
+        run: aws cloudformation validate-template --template-body file://infra/templates/network.yml > /dev/null
+      - name: Deploy networking only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t parameters < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$RUNNER_TEMP/network-parameters.json")
+          echo "Deploying $STACK_NAME from infra/templates/network.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/network.yml \
+            --stack-name "$STACK_NAME" \
+            --parameter-overrides "${parameters[@]}" \
+            --tags Environment="$DEPLOY_ENVIRONMENT" Application=per-ov-track \
+            --no-fail-on-empty-changeset
+      - name: Report network outputs
+        run: aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs' --output table
+      - name: Report deployment failure
+        if: failure()
+        shell: bash
+        run: |
+          echo '::error::Dev networking failed. Review the failed step; no other infrastructure stack is targeted.'
+          if [[ -n "${STACK_NAME:-}" && -n "${AWS_ACCESS_KEY_ID:-}" ]]; then
+            aws cloudformation describe-stack-events --stack-name "$STACK_NAME" --max-items 20 --output table || true
+          fi
