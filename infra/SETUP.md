@@ -27,10 +27,10 @@ Store distribution tracks and backend environments are separate choices.
 
 | Path | Intended keys / owner |
 | --- | --- |
-| `<environment>/per-ov-track/google` | `client_id`, `client_secret`; manual provider credentials |
-| `<environment>/per-ov-track/apple` | `client_id`, `team_id`, `key_id`, `private_key`; manual provider credentials |
-| `<environment>/per-ov-track/database` | Connection settings and credentials; schema pending RDS decisions |
-| `<environment>/per-ov-track/cognito` | Generated `region`, `user_pool_id`, `client_id` |
+| `<environment>/crimson-rhythm/google` | `client_id`, `client_secret`; manual provider credentials |
+| `<environment>/crimson-rhythm/apple` | `client_id`, `team_id`, `key_id`, `private_key`; manual provider credentials |
+| `<environment>/crimson-rhythm/database` | Connection settings and credentials; schema pending RDS decisions |
+| `<environment>/crimson-rhythm/cognito` | Generated `region`, `user_pool_id`, `client_id` |
 
 Google, Apple and database secrets omit SecretString and GenerateSecretString:
 these are empty shells with no readable secret version until values are added.
@@ -43,7 +43,7 @@ placeholder, so automatic population is PREPARED, not complete. Its future outpu
 must export `<prefix>-UserPoolId` and `<prefix>-UserPoolClientId` in the same AWS
 account and region. After those exports exist, a future secrets-stack update with
 `CognitoExportPrefix=<prefix>` will copy those generated values into the secret.
-An intended prefix is `<environment>-per-ov-track-cognito`; no IDs are fabricated.
+An intended prefix is `<environment>-crimson-rhythm-cognito`; no IDs are fabricated.
 
 This two-phase arrangement avoids a circular dependency: Cognito may need Google
 and Apple secret references while its generated configuration needs Cognito outputs.
@@ -74,15 +74,15 @@ Local validation must skip the intentionally empty files.
 
 Push mapping: `dev` branch -> GitHub environment `dev` ->
 `infra/overrides/dev/_global.json` + `network.json` ->
-`infra/templates/network.yml` -> `dev-per-ov-track-network`.
+`infra/templates/network.yml` -> `dev-crimson-rhythm-network`.
 Only networking paths trigger infrastructure deployment. Other service changes,
 other branches and PRs do not deploy infrastructure. Merging this PR into dev WILL
 trigger the network workflow if AWS access is configured; implementation itself
 has not run it. Unmerged PR #19/#20 scaffolding is included in this branch.
 
-Global parameters are Environment and AppName. Network overrides contain only
+Global parameters are Environment and ProjectName. Network overrides contain only
 VpcCidr and two subnet CIDRs. Naming uses `<environment>-<app>-<resource>` so
-WhoAmI and per-ov-track can coexist in the same account/region. No EnvUrl is needed
+WhoAmI and crimson-rhythm can coexist in the same account/region. No EnvUrl is needed
 for the VPC. No repeated environment names are added to every override file.
 Region is the GitHub dev variable AWS_REGION (default us-east-1).
 The 10.20.0.0/16 CIDR is an initial proposal, not an inventory of existing AWS
@@ -97,7 +97,7 @@ route table and have local VPC routing only. There is no public internet route,
 IGW, NAT, public subnet, endpoint, ALB, ECR, ECS, IAM role or Lambda custom resource.
 API Gateway does not need a public subnet in this VPC.
 
-Future stacks can import these outputs (prefix is dev-per-ov-track):
+Future stacks can import these outputs (prefix is dev-crimson-rhythm):
 `-vpc-id`, `-vpc-cidr`, `-private-a-id`, `-private-b-id`.
 Next dependency is typically security groups importing the VPC; groups can exist
 before Lambda/RDS because their definitions reference the VPC and other groups,
@@ -126,3 +126,17 @@ use the requested Secrets Manager convention. No long-lived AWS keys are stored.
 The workflow validates inputs before assuming the role, validates the template,
 then deploys the one named stack. It serializes network runs, reports outputs and
 prints stack events on failure. It never automatically deletes a failed stack.
+
+
+## Project naming and branch mapping
+
+ProjectName is crimson-rhythm; the GitHub repository remains KimGarza/per-ov-track.
+Network stack names/exports use dev-crimson-rhythm-* and secrets use
+<environment>/crimson-rhythm/*. The deploy workflow's strategy.matrix maps branch
+names to environment arrays through a JSON lookup. Currently {"dev":["dev"]}.
+To add a branch, update on.push.branches, the matrix lookup, path filters, and
+create/populate that environment's override files and GitHub environment first.
+Only dev is configured/accepted by the parameter validator today.
+If the former dev-per-ov-track-network stack already exists, this rename targets a
+NEW stack, not an in-place rename. Inventory/remove or migrate that earlier stack
+separately; this change never deletes existing infrastructure automatically.

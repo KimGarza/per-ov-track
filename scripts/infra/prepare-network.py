@@ -22,15 +22,15 @@ def prepare(root, environment):
             key, value = row['ParameterKey'], row['ParameterValue']
             if not isinstance(key, str) or not isinstance(value, str) or key in keys:
                 raise ValueError(f'Duplicate or non-string parameter in {name}.json.')
-            if name == 'network' and key in {'Environment', 'AppName'}:
-                raise ValueError('Environment and AppName belong only in _global.json.')
+            if name == 'network' and key in {'Environment', 'ProjectName'}:
+                raise ValueError('Environment and ProjectName belong only in _global.json.')
             keys.add(key)
             merged[key] = value
-    required = {'Environment', 'AppName', 'VpcCidr', 'PrivateSubnetACidr', 'PrivateSubnetBCidr'}
+    required = {'Environment', 'ProjectName', 'VpcCidr', 'PrivateSubnetACidr', 'PrivateSubnetBCidr'}
     if set(merged) != required or merged['Environment'] != environment:
         raise ValueError('Network parameter names or environment do not match the target.')
-    if not re.fullmatch(r'[a-z][a-z0-9-]*', merged['AppName']):
-        raise ValueError('AppName is not a valid resource-name prefix.')
+    if not re.fullmatch(r'[a-z][a-z0-9-]*', merged['ProjectName']):
+        raise ValueError('ProjectName is not a valid resource-name prefix.')
     vpc, a, b = [ipaddress.IPv4Network(merged[k], strict=True) for k in
                  ['VpcCidr', 'PrivateSubnetACidr', 'PrivateSubnetBCidr']]
     if not 16 <= vpc.prefixlen <= 28 or any(not 16 <= s.prefixlen <= 28 for s in [a, b]):
@@ -47,4 +47,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     parameters = prepare(Path(__file__).resolve().parents[2], args.environment)
     args.output.write_text(json.dumps(parameters, indent=2) + '\n')
-    print(f"Validated {args.environment}-{parameters['AppName']}-network parameters.")
+    print(f"Validated {args.environment}-{parameters['ProjectName']}-network parameters.")

@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Per-ov-track foundational VPC and isolated subnets; routing and security are separate.
+Description: Crimson Rhythm foundational VPC and isolated subnets; routing and security are separate.
 Parameters:
   Environment:
     Type: String
     AllowedValues: [dev, stage, prod]
-  AppName:
+  ProjectName:
     Type: String
     AllowedPattern: '[a-z][a-z0-9-]*'
   VpcCidr:
@@ -22,11 +22,11 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Sub '${Environment}-${AppName}-vpc'
+          Value: !Sub '${Environment}-${ProjectName}-vpc'
         - Key: Environment
           Value: !Ref Environment
-        - Key: Application
-          Value: !Ref AppName
+        - Key: Project
+          Value: !Ref ProjectName
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -36,11 +36,11 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub '${Environment}-${AppName}-private-a'
+          Value: !Sub '${Environment}-${ProjectName}-private-a'
         - Key: Environment
           Value: !Ref Environment
-        - Key: Application
-          Value: !Ref AppName
+        - Key: Project
+          Value: !Ref ProjectName
   PrivateSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
@@ -50,25 +50,25 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub '${Environment}-${AppName}-private-b'
+          Value: !Sub '${Environment}-${ProjectName}-private-b'
         - Key: Environment
           Value: !Ref Environment
-        - Key: Application
-          Value: !Ref AppName
+        - Key: Project
+          Value: !Ref ProjectName
 Outputs:
   VPCID:
     Value: !Ref VPC
     Export:
-      Name: !Sub '${Environment}-${AppName}-vpc-id'
+      Name: !Sub '${Environment}-${ProjectName}-vpc-id'
   VpcCidr:
     Value: !Ref VpcCidr
     Export:
-      Name: !Sub '${Environment}-${AppName}-vpc-cidr'
+      Name: !Sub '${Environment}-${ProjectName}-vpc-cidr'
   PrivateSubnetAId:
     Value: !Ref PrivateSubnetA
     Export:
-      Name: !Sub '${Environment}-${AppName}-private-a-id'
+      Name: !Sub '${Environment}-${ProjectName}-private-a-id'
   PrivateSubnetBId:
     Value: !Ref PrivateSubnetB
     Export:
-      Name: !Sub '${Environment}-${AppName}-private-b-id'
+      Name: !Sub '${Environment}-${ProjectName}-private-b-id'

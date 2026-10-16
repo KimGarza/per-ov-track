@@ -1,7 +1,8 @@
+import { CycleOptions } from './CycleOptions';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { holidayFor, verses } from '@/utils/faith';
-import { dateKey, parseDate, type CycleKind, type JournalEntry } from '@/utils/cycle';
+import { dateKey, parseDate, type PeriodFlow, type CervicalMucus, type CycleKind, type JournalEntry } from '@/utils/cycle';
 import { useAppTheme } from './ThemeProvider';
 import { useCycleData } from './CycleDataProvider';
 import { EditSheet } from './EditSheet';
@@ -13,6 +14,8 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
   const [entry, setEntry] = useState<JournalEntry>(() => data.journal[day] ?? { mood: '', symptoms: '', notes: '' });
   const [confirmed, setConfirmed] = useState(!data.pendingDays?.[day]);
   const [kind, setKind] = useState<CycleKind | null>(data.days[day] ?? null);
+  const [flow, setFlow] = useState<PeriodFlow | undefined>(data.observations?.[day]?.kind === 'menstrual' ? data.observations[day].flow : 'normal');
+  const [mucus, setMucus] = useState<CervicalMucus | undefined>(data.observations?.[day]?.kind === 'ovulation' ? data.observations[day].mucus : undefined);
   const [inputMode, setInputMode] = useState<'typing' | 'voice'>('typing');
   const [voicePreview, setVoicePreview] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -20,7 +23,7 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
   const save = async () => {
     setBusy(true); setError(null);
     try {
-      await saveDay(day, kind, { mood: entry.mood.trim(), symptoms: entry.symptoms.trim(), notes: entry.notes.trim() }, confirmed);
+      await saveDay(day, kind, { mood: entry.mood.trim(), symptoms: entry.symptoms.trim(), notes: entry.notes.trim() }, confirmed, kind === 'menstrual' ? { kind, flow } : kind === 'ovulation' ? { kind, mucus } : undefined);
       onClose();
     } catch { setError('Could not save your check-in. Please try again.'); }
     finally { setBusy(false); }
@@ -50,8 +53,9 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
         </>}
       </View>}
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
-        {([{ value: 'menstrual', label: 'Menstrual', color: theme.colors.calendarPeriod }, { value: 'ovulation', label: 'Ovulation', color: theme.colors.calendarFertile }, { value: null, label: 'Neither', color: theme.colors.roseWash }] as const).map(option => <Pressable key={option.label} accessibilityRole="button" accessibilityState={{ selected: kind === option.value }} disabled={busy} onPress={() => { setKind(option.value); setConfirmed(true); }} style={[g.outlineButton, { flexGrow: 1, backgroundColor: kind === option.value ? option.color : theme.colors.surface, borderColor: kind === option.value ? theme.colors.text : theme.colors.border }]}><Text style={{ color: theme.colors.text }}>{option.label}</Text></Pressable>)}
+        {([{ value: 'menstrual', label: 'Menstrual', color: theme.colors.calendarPeriod }, { value: 'ovulation', label: 'Ovulation', color: theme.colors.calendarFertile }, { value: null, label: 'Neither', color: theme.colors.roseWash }] as const).map(option => <Pressable key={option.label} accessibilityRole="button" accessibilityState={{ selected: kind === option.value }} disabled={busy} onPress={() => { setKind(previous => previous === option.value ? null : option.value); setConfirmed(true); }} style={[g.outlineButton, { flexGrow: 1, backgroundColor: kind === option.value ? option.color : theme.colors.surface, borderColor: kind === option.value ? theme.colors.text : theme.colors.border }]}><Text style={{ color: theme.colors.text }}>{option.label}</Text></Pressable>)}
       </View>
+      {kind && <CycleOptions kind={kind} flow={flow} mucus={mucus} onFlow={setFlow} onMucus={setMucus} disabled={busy} />}
       {data.pendingDays?.[day] && day <= dateKey(new Date()) && <Pressable accessibilityRole="checkbox" accessibilityLabel="Confirm cycle marking" accessibilityState={{ checked: confirmed }} aria-checked={confirmed} disabled={busy} onPress={() => setConfirmed(value => !value)} style={g.outlineButton}><Text style={{ color: theme.colors.text }}>{confirmed ? '✓' : '○'} Confirm this cycle marking</Text></Pressable>}
       {(['mood', 'symptoms', 'notes'] as const).map(field => <View key={field} style={{ gap: theme.spacing.xs }}>
         <Text style={{ color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 15, fontWeight: '600' }}>{field.charAt(0).toUpperCase() + field.slice(1)}</Text>
