@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Per-ov-track foundational VPC and isolated subnets; routing and security are separate.
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, stage, prod]
+  AppName:
+    Type: String
+    AllowedPattern: '[a-z][a-z0-9-]*'
+  VpcCidr:
+    Type: String
+  PrivateSubnetACidr:
+    Type: String
+  PrivateSubnetBCidr:
+    Type: String
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-${AppName}-vpc'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref AppName
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-${AppName}-private-a'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref AppName
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetBCidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-${AppName}-private-b'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref AppName
+Outputs:
+  VPCID:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${Environment}-${AppName}-vpc-id'
+  VpcCidr:
+    Value: !Ref VpcCidr
+    Export:
+      Name: !Sub '${Environment}-${AppName}-vpc-cidr'
+  PrivateSubnetAId:
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub '${Environment}-${AppName}-private-a-id'
+  PrivateSubnetBId:
+    Value: !Ref PrivateSubnetB
+    Export:
+      Name: !Sub '${Environment}-${AppName}-private-b-id'

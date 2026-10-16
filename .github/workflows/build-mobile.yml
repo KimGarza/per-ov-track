@@ -1,0 +1,29 @@
+name: Build and submit mobile beta (disabled)
+# Deliberately no push trigger, build, upload, or production release commands.
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Mobile platform
+        type: choice
+        options: [all, ios, android]
+        default: all
+      environment:
+        description: Backend environment (not the store release track)
+        type: choice
+        options: [dev, stage]
+        default: dev
+permissions:
+  contents: read
+jobs:
+  build-mobile:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      # Future: configure Expo project ID, app identifiers, signing and eas.json.
+      # Future: EAS Build, then EAS Submit to TestFlight / Play internal testing.
+      # Future: obtain build credentials from an approved CI bootstrap method.
+      # Runtime AWS secrets must never be bundled into the mobile application.
+      - run: echo "Mobile build and submission are intentionally disabled."
