@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
-import { applyLoggedRange, dateKey, emptyCycleData, parseDate, readCycleData, type DiaryStyle, type CycleData, type CycleKind, type JournalEntry, type ReflectionEntry } from '@/utils/cycle';
+import { applyLoggedRange, dateKey, emptyCycleData, parseDate, readCycleData, type CycleObservation, type DiaryStyle, type CycleData, type CycleKind, type JournalEntry, type ReflectionEntry } from '@/utils/cycle';
 
 const storageKey = 'crimson-rhythm:cycle-data:v1';
 function useCycleState() {
@@ -30,15 +30,15 @@ function useCycleState() {
     queue.current = operation.catch(() => {});
     return operation;
   }, [ready]);
-  const saveRange = useCallback((kind: CycleKind | null, start: string, end: string) => commit(previous => applyLoggedRange(previous, kind, start, end, dateKey(new Date()))), [commit]);
+  const saveRange = useCallback((kind: CycleKind | null, start: string, end: string, observation?: CycleObservation) => commit(previous => applyLoggedRange(previous, kind, start, end, dateKey(new Date()), observation)), [commit]);
   const saveJournal = useCallback((day: string, entry: JournalEntry) => {
     const key = dateKey(parseDate(day));
     return commit(previous => ({ ...previous, journal: { ...previous.journal, [key]: entry } }));
   }, [commit]);
-  const saveDay = useCallback((day: string, kind: CycleKind | null, entry: JournalEntry, confirmed = true) => {
+  const saveDay = useCallback((day: string, kind: CycleKind | null, entry: JournalEntry, confirmed = true, observation?: CycleObservation) => {
     const key = dateKey(parseDate(day));
     return commit(previous => {
-      const next = applyLoggedRange(previous, kind, key, key, dateKey(new Date()));
+      const next = applyLoggedRange(previous, kind, key, key, dateKey(new Date()), observation);
       if (kind && !confirmed) next.pendingDays = { ...next.pendingDays, [key]: true };
       return { ...next, journal: { ...previous.journal, [key]: entry } };
     });

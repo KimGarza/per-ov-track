@@ -1,4 +1,4 @@
-name: Deploy dev network
+name: Deploy network
 on:
   push:
     branches: [dev]
@@ -11,19 +11,24 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: per-ov-track-dev-network
+  group: crimson-rhythm-network-${{ github.ref_name }}
   cancel-in-progress: false
 jobs:
   deploy-network:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: dev
+    strategy:
+      fail-fast: false
+      matrix:
+        # Branch -> target environments. Add future branches to on.push.branches too.
+        environment: ${{ fromJSON('{"dev":["dev"]}')[github.ref_name] }}
+    environment: ${{ matrix.environment }}
     permissions:
       contents: read
       id-token: write
     env:
-      DEPLOY_ENVIRONMENT: dev
+      DEPLOY_ENVIRONMENT: ${{ matrix.environment }}
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
     steps:
@@ -40,14 +45,14 @@ jobs:
             exit 1
           fi
           python scripts/infra/prepare-network.py --environment "$DEPLOY_ENVIRONMENT" --output "$RUNNER_TEMP/network-parameters.json"
-          stack_name=$(jq -r '.Environment + "-" + .AppName + "-network"' "$RUNNER_TEMP/network-parameters.json")
+          stack_name=$(jq -r '.Environment + "-" + .ProjectName + "-network"' "$RUNNER_TEMP/network-parameters.json")
           echo "STACK_NAME=$stack_name" >> "$GITHUB_ENV"
       - name: Connect to AWS using GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: per-ov-track-network-${{ github.run_id }}
+          role-session-name: crimson-rhythm-network-${{ github.run_id }}
       - name: Validate VPC template with CloudFormation
         run: aws cloudformation validate-template --template-body file://infra/templates/network.yml > /dev/null
       - name: Deploy networking only
@@ -60,7 +65,7 @@ jobs:
             --template-file infra/templates/network.yml \
             --stack-name "$STACK_NAME" \
             --parameter-overrides "${parameters[@]}" \
-            --tags Environment="$DEPLOY_ENVIRONMENT" Application=per-ov-track \
+            --tags Environment="$DEPLOY_ENVIRONMENT" Project=crimson-rhythm \
             --no-fail-on-empty-changeset
       - name: Report network outputs
         run: aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs' --output table

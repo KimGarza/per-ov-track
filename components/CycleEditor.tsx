@@ -1,6 +1,7 @@
+import { CycleOptions } from './CycleOptions';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { parseDate, rangeDates, selectRange, type CycleKind, type DateRange } from '@/utils/cycle';
+import { parseDate, rangeDates, selectRange, type PeriodFlow, type CervicalMucus, type CycleKind, type DateRange } from '@/utils/cycle';
 import { CalendarGrid, CalendarLegend, MonthNavigation } from './CalendarGrid';
 import { useAppTheme } from './ThemeProvider';
 import { useCycleData } from './CycleDataProvider';
@@ -16,6 +17,9 @@ export function CycleEditor({ initialDate, today, calendarFirst = false, onClose
   const [screen, setScreen] = useState<'choice' | 'calendar'>(calendarFirst ? 'calendar' : 'choice');
   const [month, setMonth] = useState(() => new Date(initial.getFullYear(), initial.getMonth(), 1));
   const [kind, setKind] = useState<CycleKind | null>('menstrual');
+  const [flow, setFlow] = useState<PeriodFlow | undefined>('normal');
+  const [mucus, setMucus] = useState<CervicalMucus | undefined>(undefined);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
   const [jump, setJump] = useState(false);
   const [year, setYear] = useState(String(initial.getFullYear()));
@@ -23,7 +27,7 @@ export function CycleEditor({ initialDate, today, calendarFirst = false, onClose
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const changeMonth = (value: Date) => { setMonth(value); setYear(String(value.getFullYear())); };
-  const chooseKind = (value: CycleKind | null) => { setKind(value); setRange({ start: null, end: null }); setMessage(null); setError(null); };
+  const chooseKind = (value: CycleKind | null) => { setOptionsOpen(previous => value !== null && (kind !== value || !previous)); setKind(value); setRange({ start: null, end: null }); setMessage(null); setError(null); };
   const select = (day: string) => { setRange(previous => selectRange(previous, day)); setError(null); setMessage(null); };
   const save = async () => {
     if (!range.start || busy) return;
@@ -32,7 +36,7 @@ export function CycleEditor({ initialDate, today, calendarFirst = false, onClose
     try {
       const end = range.end ?? range.start;
       const dates = rangeDates(range.start, end);
-      await saveRange(kind, range.start, end);
+      await saveRange(kind, range.start, end, kind === 'menstrual' ? { kind, flow } : kind === 'ovulation' ? { kind, mucus } : undefined);
       setMessage(`${dates.length} ${dates.length === 1 ? 'day' : 'days'} ${kind ? 'saved' : 'cleared'}. Choose another range or switch to the other marking.`);
       setRange({ start: null, end: null });
     } catch (cause) {
@@ -50,6 +54,7 @@ export function CycleEditor({ initialDate, today, calendarFirst = false, onClose
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
         {([{ value: 'menstrual', label: 'Menstrual', color: theme.colors.calendarPeriod }, { value: 'ovulation', label: 'Ovulation', color: theme.colors.calendarFertile }, { value: null, label: 'Clear dates', color: theme.colors.roseWash }] as const).map(option => <Pressable key={option.label} accessibilityRole="button" accessibilityState={{ selected: kind === option.value }} disabled={busy} onPress={() => chooseKind(option.value)} style={[g.outlineButton, { flexGrow: 1, backgroundColor: kind === option.value ? option.color : theme.colors.surface, borderColor: kind === option.value ? theme.colors.text : theme.colors.border }]}><Text style={{ color: theme.colors.text, fontWeight: kind === option.value ? '700' : '400' }}>{option.label}</Text></Pressable>)}
       </View>
+      {kind && optionsOpen && <CycleOptions kind={kind} flow={flow} mucus={mucus} onFlow={setFlow} onMucus={setMucus} disabled={busy} />}
       <Text style={[g.body, { fontSize: 14 }]}>{!range.start ? 'Tap a start date, then an end date.' : !range.end ? 'Now tap the end date. For a single day, tap ✓ Save.' : 'Range selected. Tap ✓ Save, or tap a date to start again.'}</Text>
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Change start date" disabled={busy} onPress={() => setRange({ start: null, end: null })} style={[g.outlineButton, { flex: 1 }]}><Text style={{ color: theme.colors.muted, fontSize: 12 }}>Start</Text><Text style={{ color: theme.colors.text, fontSize: 13 }}>{format(range.start)}</Text></Pressable>

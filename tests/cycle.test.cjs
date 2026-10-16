@@ -97,3 +97,21 @@ test('journal page typography, ink and highlight round trip with validation', ()
   data.diaryStyles['2026-10-15'].font = 'missing-font';
   assert.throws(() => readCycleData(JSON.stringify(data)));
 });
+
+test('optional observations survive reload, replace by range and clear with markings', () => {
+  let data = applyRange(emptyCycleData(), 'menstrual', '2026-10-14', '2026-10-16', { kind: 'menstrual', flow: 'heavy' });
+  assert.equal(readCycleData(JSON.stringify(data)).observations['2026-10-15'].flow, 'heavy');
+  data = applyRange(data, 'menstrual', '2026-10-15', '2026-10-15');
+  assert.equal(data.observations['2026-10-15'].flow, 'heavy');
+  data = applyRange(data, 'ovulation', '2026-10-15', '2026-10-15', { kind: 'ovulation', mucus: 'watery' });
+  assert.equal(data.observations['2026-10-15'].flow, undefined);
+  assert.equal(readCycleData(JSON.stringify(data)).observations['2026-10-15'].mucus, 'watery');
+  data = applyRange(data, 'menstrual', '2026-10-14', '2026-10-14', { kind: 'menstrual' });
+  assert.equal(data.observations['2026-10-14'].flow, undefined);
+  data = applyRange(data, null, '2026-10-15', '2026-10-15');
+  assert.equal(data.observations['2026-10-15'], undefined);
+  assert.equal(data.observations['2026-10-16'].flow, 'heavy');
+  assert.throws(() => applyRange(data, 'menstrual', '2026-10-14', '2026-10-14', { kind: 'ovulation' }));
+  data.observations['2026-10-16'].flow = 'invalid';
+  assert.throws(() => readCycleData(JSON.stringify(data)));
+});

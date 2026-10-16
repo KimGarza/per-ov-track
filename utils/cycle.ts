@@ -1,4 +1,7 @@
 export type CycleKind = 'menstrual' | 'ovulation';
+export type PeriodFlow = 'spotting' | 'light' | 'normal' | 'heavy';
+export type CervicalMucus = 'dry' | 'sticky' | 'creamy' | 'watery' | 'stretchy';
+export type CycleObservation = { kind: 'menstrual'; flow?: PeriodFlow } | { kind: 'ovulation'; mucus?: CervicalMucus };
 export type JournalEntry = { mood: string; symptoms: string; notes: string };
 export type DiaryStyle = { font: 'theme' | 'CormorantGaramond' | 'SpaceMono' | 'system'; ink: 'text' | 'rose' | 'olive'; highlight: 'none' | 'rose' | 'sage' };
 export type ReflectionEntry = { pattern: string; action: string; completed: string[] };
@@ -6,6 +9,7 @@ export type CycleData = {
   version: 1;
   days: Record<string, CycleKind>;
   journal: Record<string, JournalEntry>;
+  observations?: Record<string, CycleObservation>;
   pendingDays?: Record<string, true>;
   diaryStyles?: Record<string, DiaryStyle>;
   diary?: Record<string, string>;
@@ -46,13 +50,17 @@ export function selectRange(range: DateRange, day: string): DateRange {
   // Like a booking picker, an earlier click starts a new range.
   return day < range.start ? { start: day, end: null } : { start: range.start, end: day };
 }
-export function applyRange(data: CycleData, kind: CycleKind | null, start: string, end: string): CycleData {
+export function applyRange(data: CycleData, kind: CycleKind | null, start: string, end: string, observation?: CycleObservation): CycleData {
+  if (observation && observation.kind !== kind) throw new Error('Observation does not match marking');
+  const observations = { ...data.observations };
   const days = { ...data.days };
   for (const day of rangeDates(start, end)) {
     if (kind) days[day] = kind;
     else delete days[day];
+    if (!kind || data.days[day] !== kind) delete observations[day];
+    if (observation) observations[day] = observation;
   }
-  return { ...data, days };
+  return { ...data, days, ...(data.observations || observation ? { observations } : {}) };
 }
 export function cycleDay(data: CycleData, today: string): number | null {
   const periods = Object.keys(data.days).filter(key => key <= today && !data.pendingDays?.[key] && data.days[key] === 'menstrual').sort();
@@ -73,6 +81,18 @@ export function readCycleData(value: string): CycleData {
   for (const [day, entry] of Object.entries(data.journal)) {
     parseDate(day);
     if (!entry || !['mood', 'symptoms', 'notes'].every(field => typeof entry[field as keyof JournalEntry] === 'string')) throw new Error('Invalid saved journal');
+  }
+  if (data.observations) {
+    if (typeof data.observations !== 'object' || Array.isArray(data.observations)) throw new Error('Invalid observations');
+    for (const [day, observation] of Object.entries(data.observations)) {
+      parseDate(day);
+      if (!observation || observation.kind !== data.days[day]) throw new Error('Invalid observation marking');
+      if (observation.kind === 'menstrual') {
+        if (Object.keys(observation).some(key => !['kind', 'flow'].includes(key)) || (observation.flow !== undefined && !['spotting', 'light', 'normal', 'heavy'].includes(observation.flow))) throw new Error('Invalid flow');
+      } else if (observation.kind === 'ovulation') {
+        if (Object.keys(observation).some(key => !['kind', 'mucus'].includes(key)) || (observation.mucus !== undefined && !['dry', 'sticky', 'creamy', 'watery', 'stretchy'].includes(observation.mucus))) throw new Error('Invalid mucus');
+      } else throw new Error('Invalid observation');
+    }
   }
   if (data.reflections) {
     if (typeof data.reflections !== 'object' || Array.isArray(data.reflections)) throw new Error('Invalid saved reflection');
@@ -105,8 +125,8 @@ export function readCycleData(value: string): CycleData {
 }
 
 // Future markings remain plans until a user explicitly logs them on/after that date.
-export function applyLoggedRange(data: CycleData, kind: CycleKind | null, start: string, end: string, today: string): CycleData {
-  const next = applyRange(data, kind, start, end);
+export function applyLoggedRange(data: CycleData, kind: CycleKind | null, start: string, end: string, today: string, observation?: CycleObservation): CycleData {
+  const next = applyRange(data, kind, start, end, observation);
   const pendingDays = { ...data.pendingDays };
   for (const day of rangeDates(start, end)) {
     if (kind && day > today) pendingDays[day] = true;
