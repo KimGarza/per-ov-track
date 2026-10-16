@@ -1,0 +1,23 @@
+name: Deploy infrastructure (disabled)
+# Deliberately no push trigger. No AWS login or deploy commands yet.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment (deployment remains disabled)
+        type: choice
+        options: [dev, stage, prod]
+        default: dev
+permissions:
+  contents: read
+jobs:
+  deploy-infra:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      # Future: OIDC using environment variable AWS_ROLE_ARN, no static AWS keys.
+      # Future: merge infra/overrides/<environment>/_global.json + service.json.
+      # Future: validate/change-set/review/deploy infra/templates/<service>.yml.
+      - run: echo "Deployment is intentionally not implemented or enabled."
