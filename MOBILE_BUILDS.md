@@ -62,10 +62,17 @@ No paid builds, signing operations, submissions or public releases were run here
 ## Reported install failure
 
 Both provided screenshots show npm ci rejecting the lockfile with
-`Missing: typescript@5.9.3 from lock file`. The current committed baseline passes
-local npm 10/11 dry runs, so the exact uploaded archive differs or the builder
-resolves its tree differently. This change regenerates the lockfile alongside the
-SDK-compatible dev-client addition and validates a fresh frozen npm 10 install.
-Do not downgrade TypeScript solely because a missing transitive version appears
-in the error; retry with the updated committed lockfile and capture the complete
-install log if the remote build still fails.
+`Missing: typescript@5.9.3 from lock file`. This was reproduced from the merged
+dev tree using Node 22.23.3 and npm 10.9.9, matching the EAS profile's Node line.
+The locally installed eas-cli pulled in @expo/require-utils 55.x, whose TypeScript
+peer supports only v5, alongside the app's TypeScript 6. npm 10 rejected the
+missing nested v5 peer; an install under the other local runtime had passed.
+
+Remove eas-cli from app devDependencies and regenerate the lockfile. The existing
+build/submit scripts already use `npx eas-cli@latest`, so the CLI does not need to
+be installed in the app's dependency tree. Keep the app's TypeScript and SDK
+versions. CI now pins the same Node version as EAS and reports Node/npm versions.
+No legacy-peer-deps, forced audit fixes, or disabled frozen-lockfile checks are used.
+
+After merging and pulling, run `npm ci`, then `npm run build:dev`. The cloud
+build still needs to run successfully; local installation is not a native build.
