@@ -37,7 +37,13 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "node --test tests/*.test.cjs",
-    "guidance:server": "node server/guidance.mjs"
+    "guidance:server": "node server/guidance.mjs",
+    "build:dev": "npx eas-cli@latest build --platform all --profile development-all",
+    "submit:ios:beta": "npx eas-cli@latest submit --platform ios --profile development-all",
+    "start:dev-client": "expo start --dev-client"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  }
 }
