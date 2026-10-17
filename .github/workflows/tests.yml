@@ -14,8 +14,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.23.3'
           cache: npm
+      - name: Report build-compatible runtime
+        run: |
+          node --version
+          npm --version
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
