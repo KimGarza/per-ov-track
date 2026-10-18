@@ -39,7 +39,11 @@
     "guidance:server": "node server/guidance.mjs",
     "build:dev": "npx eas-cli@latest build --platform all --profile development-all",
     "submit:ios:beta": "npx eas-cli@latest submit --platform ios --profile development-all",
-    "start:dev-client": "expo start --dev-client"
+    "start:dev-client": "expo start --dev-client",
+    "build:beta": "npx eas-cli@latest build --platform all --profile store-development",
+    "submit:beta": "npx eas-cli@latest submit --platform all --profile store-development",
+    "submit:android:beta": "npx eas-cli@latest submit --platform android --profile store-development",
+    "deploy:beta": "npx eas-cli@latest build --platform all --profile store-development --auto-submit"
   },
   "private": true,
   "engines": {
