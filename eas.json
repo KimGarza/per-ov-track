@@ -37,6 +37,19 @@
       "ios": {
         "simulator": false
       }
+    },
+    "store-development": {
+      "extends": "base",
+      "environment": "development",
+      "distribution": "store",
+      "developmentClient": false,
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "simulator": false
+      }
     }
   },
   "submit": {
@@ -49,6 +62,13 @@
         "track": "production",
         "releaseStatus": "draft"
       }
+    },
+    "store-development": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {}
     }
   }
 }

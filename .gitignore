@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Local store credentials (prefer storing submission keys in EAS)
+/credentials/
+/credentials.json
+/google-service-account*.json
