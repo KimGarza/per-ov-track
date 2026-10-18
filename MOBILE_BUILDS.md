@@ -11,7 +11,7 @@ Both use EAS environment `development`. This selects build-time configuration;
 it does not provision AWS or connect the current local-only tracker to a backend.
 No OTA channel is configured because expo-updates is not installed/configured.
 `production` is separate and uses EAS environment `production` and store builds.
-Neither profile builds or submits automatically on a GitHub push.
+Push automation is configured below; the local development-client profile is not used by CI.
 
 ## Before retrying
 
@@ -175,3 +175,53 @@ References:
 - https://docs.expo.dev/submit/ios/
 - https://support.google.com/googleplay/android-developer/answer/9845334
 - https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/
+
+
+## GitHub push automation
+
+`.github/workflows/build-mobile.yml` uses a branch/environment matrix:
+
+| Push branch | GitHub environment | EAS profile | EAS environment |
+| --- | --- | --- | --- |
+| dev | dev | store-development | development |
+| stage | stage | store-staging | preview |
+| prod | prod | production | production |
+
+Edit the matrix lookup in the workflow to change branch mappings. All builds
+request Android and iOS and auto-submit the matching builds. Dev/stage upload to
+Google Play internal testing as drafts; prod uploads to its production track as
+a draft. All iOS uploads go to TestFlight. No public rollout is automated.
+These profiles share the same app identifiers and store records; environments
+are not separate installed apps. Stage currently uses the same internal test
+track as dev. Backend environment selection does not implement cloud storage.
+
+### One-time setup
+
+1. In GitHub repository Settings > Environments, create dev, stage and prod.
+   Allow each environment's matching branch under deployment branch rules.
+2. In EACH environment, add secret `EXPO_TOKEN`: create a personal access token
+   at https://expo.dev/accounts/kimgarza/settings/access-tokens with access to
+   this existing Expo project. The same token can be used across environments.
+3. In EACH environment, add variable `ASC_APP_ID`: the numeric Apple ID from
+   App Store Connect > your app > App Information. This is not the bundle ID.
+   Use the same value while all environments share the current app record.
+4. Ensure EAS has the existing Android keystore and Apple store signing
+   credentials, plus the Google Play submission service-account key and Apple
+   App Store Connect submission API key described above. Complete their initial
+   setup interactively before running CI; CI cannot answer credential prompts.
+5. Merge the workflow and push to the desired branch. GitHub authenticates to
+   Expo using EXPO_TOKEN. No AWS_ROLE_ARN, AWS_REGION, AWS permissions, or GitHub
+   OIDC token is required for this mobile workflow. AWS infra remains separate.
+
+The runner supplies ASC_APP_ID to the selected submission profile in its
+checkout only. No store credential is committed or embedded in the app.
+EAS CLI is installed by the Expo action, outside the app dependency tree.
+
+GitHub queues builds with --no-wait so it does not spend runner time waiting
+for EAS cloud builds. A green GitHub job means requests were queued, NOT that
+builds/submissions succeeded. Follow the EAS links in the job output for results.
+Auto-submit runs after successful builds, using those exact builds. GitHub
+concurrency serializes queueing per environment, not remote EAS build completion.
+Google draft rollout and Apple tester assignment still happen in their consoles.
+
+Reference: https://docs.expo.dev/build/building-on-ci/
