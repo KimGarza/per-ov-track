@@ -1,29 +1,66 @@
-name: Build and submit mobile beta (disabled)
-# Deliberately no push trigger, build, upload, or production release commands.
+name: Deploy to EAS
+
 on:
-  workflow_dispatch:
-    inputs:
-      platform:
-        description: Mobile platform
-        type: choice
-        options: [all, ios, android]
-        default: all
-      environment:
-        description: Backend environment (not the store release track)
-        type: choice
-        options: [dev, stage]
-        default: dev
+  push:
+    branches: [dev, stage, prod]
+
 permissions:
   contents: read
+
+concurrency:
+  group: eas-deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
-  build-mobile:
-    if: ${{ false }}
+  build-and-submit:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        # Change this lookup to map branches to GitHub environments.
+        environment: ${{ fromJSON('{"dev":["dev"],"stage":["stage"],"prod":["prod"]}')[github.ref_name] }}
+    environment: ${{ matrix.environment }}
+    env:
+      ENVIRONMENT: ${{ matrix.environment }}
+      EAS_PROFILE: ${{ fromJSON('{"dev":"store-development","stage":"store-staging","prod":"production"}')[matrix.environment] }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      ASC_APP_ID: ${{ vars.ASC_APP_ID }}
     steps:
-      - uses: actions/checkout@v4
-      # Future: configure Expo project ID, app identifiers, signing and eas.json.
-      # Future: EAS Build, then EAS Submit to TestFlight / Play internal testing.
-      # Future: obtain build credentials from an approved CI bootstrap method.
-      # Runtime AWS secrets must never be bundled into the mobile application.
-      - run: echo "Mobile build and submission are intentionally disabled."
+      - name: Check environment configuration
+        run: |
+          test -n "$EXPO_TOKEN" || { echo "Add EXPO_TOKEN as a GitHub environment secret."; exit 1; }
+          test -n "$ASC_APP_ID" || { echo "Add ASC_APP_ID as a GitHub environment variable."; exit 1; }
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+
+      - name: Connect to Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Configure Apple submission target
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const appId = process.env.ASC_APP_ID;
+          if (!/^\d+$/.test(appId)) throw new Error('ASC_APP_ID must be the numeric Apple app ID.');
+          const config = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
+          const profile = config.submit[process.env.EAS_PROFILE];
+          profile.ios = { ...profile.ios, ascAppId: appId };
+          fs.writeFileSync('eas.json', JSON.stringify(config, null, 2) + '\n');
+          NODE
+
+      - name: Queue Android and iOS builds with automatic submission
+        # EAS handles build completion and submission; GitHub only waits for queueing.
+        run: npx eas-cli@latest build --platform all --profile "$EAS_PROFILE" --auto-submit --non-interactive --no-wait

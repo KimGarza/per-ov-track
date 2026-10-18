@@ -50,6 +50,10 @@
       "ios": {
         "simulator": false
       }
+    },
+    "store-staging": {
+      "extends": "store-development",
+      "environment": "preview"
     }
   },
   "submit": {
@@ -69,6 +73,9 @@
         "releaseStatus": "draft"
       },
       "ios": {}
+    },
+    "store-staging": {
+      "extends": "store-development"
     }
   }
 }
