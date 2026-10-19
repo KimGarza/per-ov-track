@@ -4,7 +4,8 @@ import { panelTitles, type PrimaryPanel } from '@/components/PrimaryPanels';
 import { IllustrationPlaceholder } from '@/components/IllustrationPlaceholder';
 import { MenuButton, usePrimaryPanel } from '@/components/SideMenu';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Text } from '@/components/Themed';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FaithBackdrop, ThemeFloralAccent } from '@/components/FaithBackdrop';
 import { DailyVerseReference, VerseIconButton, VersePopup } from '@/components/DailyVerse';
@@ -16,7 +17,7 @@ import { useToday } from '@/components/useToday';
 import { createGlobalStyles, type Theme } from '@/constants/Theme';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { dailyVerse } from '@/utils/faith';
-import { cycleDay, dateKey, parseDate, type JournalEntry, type CycleKind } from '@/utils/cycle';
+import { cycleDay, dateKey, parseDate, type EstimatedPhase, type JournalEntry, type CycleKind } from '@/utils/cycle';
 
 type Editor = { type: 'cycle'; calendarFirst: boolean } | { type: 'day'; day: string; field?: keyof JournalEntry } | null;
 export default function HomeScreen() {
@@ -43,7 +44,12 @@ export default function HomeScreen() {
   const [sampleDismissed, setSampleDismissed] = useState(false);
   const showSample = !sampleDismissed && !Object.keys(data.days).length && !Object.keys(data.journal).length;
   const sampleDays: Record<string, CycleKind> = {};
+  const samplePhases: Record<string, EstimatedPhase> = {};
   if (showSample) {
+    for (let day = 9; day <= 31; day++) {
+      if (day >= 16 && day <= 20) continue;
+      samplePhases[dateKey(new Date(month.getFullYear(), month.getMonth(), day))] = day < 16 ? 'follicular' : 'luteal';
+    }
     for (let day = 4; day <= 8; day++) sampleDays[dateKey(new Date(month.getFullYear(), month.getMonth(), day))] = 'menstrual';
     for (let day = 16; day <= 20; day++) sampleDays[dateKey(new Date(month.getFullYear(), month.getMonth(), day))] = 'ovulation';
   }
@@ -75,7 +81,7 @@ export default function HomeScreen() {
         <View style={[g.card, s.calendar]}>
           <ThemeFloralAccent />
           <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setEditor({ type: 'cycle', calendarFirst: true })} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
-          <CalendarGrid month={month} today={today} days={data.days} predictedDays={showSample ? sampleDays : {}} pendingDays={data.pendingDays} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
+          <CalendarGrid month={month} today={today} days={data.days} predictedDays={showSample ? sampleDays : {}} pendingDays={data.pendingDays} phaseDays={showSample ? samplePhases : undefined} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
           <CalendarLegend compact />
           {showSample && <Pressable accessibilityRole="button" accessibilityLabel="Hide sample calendar" onPress={() => setSampleDismissed(true)}><Text style={{ color: theme.colors.muted, fontSize: 11, textAlign: 'center' }}>Sample colors only · Add your dates above · Hide</Text></Pressable>}
         </View>

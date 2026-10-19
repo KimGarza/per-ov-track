@@ -1,6 +1,7 @@
 import { CycleOptions } from './CycleOptions';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
+import { Text } from '@/components/Themed';
 import { holidayFor, verses } from '@/utils/faith';
 import { dateKey, parseDate, type PeriodFlow, type CervicalMucus, type CycleKind, type JournalEntry } from '@/utils/cycle';
 import { useAppTheme } from './ThemeProvider';
@@ -41,7 +42,7 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
         {([{ id: 'typing', label: '✎ Typing' }, { id: 'voice', label: '♫ Voice memo' }] as const).map(option => <Pressable key={option.id} accessibilityRole="button" accessibilityLabel={option.id === 'typing' ? 'Typing input' : 'Voice memo input'} accessibilityState={{ selected: inputMode === option.id }} disabled={busy} onPress={() => setInputMode(option.id)} style={[g.outlineButton, { flex: 1, backgroundColor: inputMode === option.id ? theme.colors.roseWash : theme.colors.surface }]}><Text style={{ color: theme.colors.text, fontWeight: '600' }}>{option.label}</Text></Pressable>)}
       </View>
       {inputMode === 'voice' && <View style={[g.card, { padding: theme.spacing.md, gap: theme.spacing.sm, backgroundColor: theme.colors.roseWash }]}>
-        <Text style={[g.heading, { fontSize: 25 }]}>A moment to speak freely</Text>
+        <Text style={g.sectionHeading}>A moment to speak freely</Text>
         <Text style={g.body}>Voice memo preview · Recording, transcription and AI summarizing will be connected later. This demo does not use your microphone.</Text>
         <Pressable accessibilityRole="button" onPress={() => setVoicePreview(true)} style={g.outlineButton}><Text style={{ color: theme.colors.text }}>Try voice memo preview</Text></Pressable>
         {voicePreview && <>

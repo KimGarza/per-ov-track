@@ -27,10 +27,10 @@ export function useThemeColor(
 
 export function Text(props: TextProps) {
   const { style, lightColor, darkColor, ...otherProps } = props;
-  const { theme } = useAppTheme();
+  const { styles: g } = useAppTheme();
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
 
-  return <DefaultText style={[{ color, fontFamily: theme.fonts.body }, style]} {...otherProps} />;
+  return <DefaultText style={[g.text, { color }, style]} {...otherProps} />;
 }
 
 export function View(props: ViewProps) {

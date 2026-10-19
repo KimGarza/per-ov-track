@@ -99,3 +99,34 @@ The journal contains a small pill toolbar for Font, Color and Highlight. Each op
 Today's marker is a sibling below the date button, with reserved vertical clearance so the date border cannot cover it. Settings offers Circle and Heart variants (session preference), and the legend follows the choice. No existing palette literals were changed.
 
 Menstrual shape preview: the shared `DropMarker` now places a soft teardrop behind each menstrual date and in its legend, replacing the colored circle and separate tiny drop. It uses the existing confirmed/estimated theme fills; ovulation flowers, selection rings and today's lower marker remain unchanged. The shared grid also applies this preview in range selection.
+
+
+## Shared styling audit and phase estimates
+
+`constants/Theme.ts` owns palette colors, fonts, spacing, radii, shared controls,
+and calendar sizing. Existing palette values are preserved. Each theme provides
+its own `calendarFollicular` and `calendarLuteal` colors independently.
+
+Use `Text` from `components/Themed` for app text so even small labels inherit the
+active body font and text color. Explicit heading/journal styles override that
+base. Use `useAppTheme().styles` for cards, buttons, inputs, labels, captions,
+section headings, rows and selected options. Keep component-specific responsive
+layout and illustration geometry local; these are not separate visual themes.
+Journal font/color choices are intentional user overrides of theme defaults.
+
+Themes share one typed contract; selectors derive names from the theme registry.
+New colors belong in that contract and every palette, not in individual screens.
+
+## Calendar phases
+
+`utils/cycle.ts:estimateCyclePhases` supplies display-only phase estimates to the
+shared CalendarGrid, including the editing calendar. It learns a typical cycle
+length from up to six confirmed 21–45-day intervals (median), or defaults to 28
+when insufficient history exists. Approximate ovulation is 14 days before the
+next start; this is not confirmation of ovulation or a contraceptive prediction.
+No fertility-window prediction is added. Logged drops/flowers and selection
+previews take precedence. Pending dates do not train the model; long unexplained
+gaps stay blank. Nothing is saved as a confirmed event by this calculation.
+The initial empty-state sample is explicitly labeled and does not train estimates.
+
+Settings keeps the shared card design and explains how estimates work.

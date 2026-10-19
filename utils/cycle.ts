@@ -142,3 +142,31 @@ export function mixColor(color: string, surface: string, amount = 0.48): string 
   const base = rgb(color), paper = rgb(surface);
   return `rgb(${base.map((value, index) => Math.round(value * (1 - amount) + paper[index] * amount)).join(', ')})`;
 }
+
+export type EstimatedPhase = 'follicular' | 'luteal';
+// Visual context only: these calendar estimates cannot confirm ovulation.
+// Use confirmed period starts; future plans never train the estimate.
+export function estimateCyclePhases(data: CycleData, month: Date, today: string): Record<string, EstimatedPhase> {
+  const periods = Object.keys(data.days).filter(key => key <= today && !data.pendingDays?.[key] && data.days[key] === 'menstrual').sort();
+  if (!periods.length) return {};
+  const periodSet = new Set(periods);
+  const starts = periods.filter(key => !periodSet.has(addDays(key, -1)));
+  const intervals = starts.slice(1).map((key, index) => daysBetween(starts[index], key)).filter(length => length >= 21 && length <= 45).slice(-6).sort((a, b) => a - b);
+  const middle = Math.floor(intervals.length / 2);
+  const length = intervals.length ? Math.round((intervals[middle] + intervals[Math.floor((intervals.length - 1) / 2)]) / 2) : 28;
+  const result: Record<string, EstimatedPhase> = {};
+  const first = dateKey(new Date(month.getFullYear(), month.getMonth(), 1));
+  const last = dateKey(new Date(month.getFullYear(), month.getMonth() + 1, 0));
+  starts.forEach((start, index) => {
+    const end = starts[index + 1] ?? addDays(start, length);
+    const cycleLength = daysBetween(start, end);
+    // Do not fill unexplained long gaps or repeat an overdue cycle indefinitely.
+    if (cycleLength < 21 || cycleLength > 45 || end <= first || start > last) return;
+    const ovulation = addDays(end, -14);
+    for (const key of rangeDates(start > first ? start : first, addDays(end, -1) < last ? addDays(end, -1) : last)) {
+      if (data.days[key] || key === ovulation) continue;
+      result[key] = key > ovulation ? 'luteal' : 'follicular';
+    }
+  });
+  return result;
+}

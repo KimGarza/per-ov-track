@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Text } from '@/components/Themed';
 import { guidanceTopics, parseGuidanceResponse, topicCards, type GuidanceCard } from '@/utils/faith';
 import { useAppTheme } from './ThemeProvider';
 import { EditSheet } from './EditSheet';

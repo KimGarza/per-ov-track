@@ -115,3 +115,49 @@ test('optional observations survive reload, replace by range and clear with mark
   data.observations['2026-10-16'].flow = 'invalid';
   assert.throws(() => readCycleData(JSON.stringify(data)));
 });
+
+test('phase estimates stay empty without confirmed periods, including future plans', () => {
+  const { estimateCyclePhases, applyLoggedRange } = exportsObject;
+  const month = new Date(2026, 9, 1);
+  assert.deepEqual(plain(estimateCyclePhases(emptyCycleData(), month, '2026-10-15')), {});
+  const planned = applyLoggedRange(emptyCycleData(), 'menstrual', '2026-10-20', '2026-10-24', '2026-10-15');
+  assert.deepEqual(plain(estimateCyclePhases(planned, month, '2026-10-25')), {});
+});
+
+test('phase estimates respect logged markings, month boundaries and the next cycle', () => {
+  const { estimateCyclePhases } = exportsObject;
+  let data = applyRange(emptyCycleData(), 'menstrual', '2026-10-01', '2026-10-05');
+  data = applyRange(data, 'ovulation', '2026-10-16', '2026-10-17');
+  const phases = estimateCyclePhases(data, new Date(2026, 9, 1), '2026-10-20');
+  assert.equal(phases['2026-10-01'], undefined);
+  assert.equal(phases['2026-10-06'], 'follicular');
+  assert.equal(phases['2026-10-15'], undefined); // Estimated ovulation day is not confirmed.
+  assert.equal(phases['2026-10-16'], undefined); // Logged flowers take precedence.
+  assert.equal(phases['2026-10-18'], 'luteal');
+  assert.equal(phases['2026-10-28'], 'luteal');
+  assert.equal(phases['2026-10-29'], undefined);
+  assert.deepEqual(plain(estimateCyclePhases(data, new Date(2026, 10, 1), '2026-11-20')), {});
+});
+
+test('phase estimates learn cycle length from confirmed starts across leap-day months', () => {
+  const { estimateCyclePhases } = exportsObject;
+  let data = applyRange(emptyCycleData(), 'menstrual', '2028-01-28', '2028-02-01');
+  data = applyRange(data, 'menstrual', '2028-02-27', '2028-03-02');
+  const phases = estimateCyclePhases(data, new Date(2028, 2, 1), '2028-03-10');
+  assert.equal(phases['2028-03-02'], undefined);
+  assert.equal(phases['2028-03-03'], 'follicular');
+  assert.equal(phases['2028-03-14'], undefined);
+  assert.equal(phases['2028-03-15'], 'luteal');
+  assert.equal(phases['2028-03-27'], 'luteal');
+  assert.equal(phases['2028-03-28'], undefined);
+  assert.ok(Object.keys(phases).every(key => key.startsWith('2028-03-')));
+});
+
+test('phase estimates leave long unexplained gaps blank and never alter saved dates', () => {
+  const { estimateCyclePhases } = exportsObject;
+  let data = applyRange(emptyCycleData(), 'menstrual', '2026-01-01', '2026-01-05');
+  data = applyRange(data, 'menstrual', '2026-06-01', '2026-06-05');
+  const original = JSON.stringify(data);
+  assert.deepEqual(plain(estimateCyclePhases(data, new Date(2026, 2, 1), '2026-06-10')), {});
+  assert.equal(JSON.stringify(data), original);
+});

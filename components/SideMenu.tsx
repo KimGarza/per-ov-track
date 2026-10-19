@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { Animated, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Text } from '@/components/Themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OptionPopover, type AnchorRect } from './OptionPopover';
 import { themeOptions } from '@/constants/Theme';
@@ -38,10 +39,10 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
       <View style={{ flex: 1, flexDirection: 'row' }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Close navigation menu" onPress={() => setOpen(false)} style={{ position: 'absolute', inset: 0, backgroundColor: theme.colors.overlay }} />
         <Animated.View style={{ width: '82%', maxWidth: 320, transform: [{ translateX: slide }] }}><SafeAreaView style={{ flex: 1, width: '100%', backgroundColor: theme.colors.surface, borderRightWidth: 1, borderColor: theme.colors.border }}>
-          <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
+          <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={[g.heading, { fontSize: 30 }]}>✝ Crimson Rhythm</Text><Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={() => setOpen(false)} style={g.outlineButton}><Text style={{ color: theme.colors.text }}>×</Text></Pressable></View>
             <Text style={[g.body, { fontStyle: 'italic' }]}>Grace for every season.</Text>
-            {items.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.label} onPress={event => { if (item.id === 'themes') event.currentTarget.measureInWindow((x, y, width, height) => setThemeAnchor({ x, y, width, height })); else openPanel(item.id); }} style={[g.outlineButton, { alignItems: 'flex-start', paddingHorizontal: 16 }]}><Text style={{ color: theme.colors.text, fontSize: 16 }}>{item.icon}   {item.label}</Text></Pressable>)}
+            {items.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.label} onPress={event => { if (item.id === 'themes') event.currentTarget.measureInWindow((x, y, width, height) => setThemeAnchor({ x, y, width, height })); else openPanel(item.id); }} style={[g.outlineButton, { alignItems: 'flex-start', paddingHorizontal: theme.spacing.md }]}><Text style={{ color: theme.colors.text, fontSize: 16 }}>{item.icon}   {item.label}</Text></Pressable>)}
           </ScrollView>
         </SafeAreaView></Animated.View>
       </View>)}
