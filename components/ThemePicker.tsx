@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Text } from '@/components/Themed';
 import { SymbolView } from 'expo-symbols';
 import { themeOptions, themes } from '@/constants/Theme';
 import { useAppTheme } from './ThemeProvider';

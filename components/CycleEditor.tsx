@@ -1,6 +1,7 @@
 import { CycleOptions } from './CycleOptions';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
+import { Text } from '@/components/Themed';
 import { parseDate, rangeDates, selectRange, type PeriodFlow, type CervicalMucus, type CycleKind, type DateRange } from '@/utils/cycle';
 import { CalendarGrid, CalendarLegend, MonthNavigation } from './CalendarGrid';
 import { useAppTheme } from './ThemeProvider';

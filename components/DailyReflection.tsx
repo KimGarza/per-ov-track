@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
+import { Text } from '@/components/Themed';
 import type { ReflectionEntry } from '@/utils/cycle';
 import { useAppTheme } from './ThemeProvider';
 import { useCycleData } from './CycleDataProvider';

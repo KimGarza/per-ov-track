@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/components/Themed';
 import { useAppTheme } from './ThemeProvider';
 import type { CervicalMucus, CycleKind, PeriodFlow } from '@/utils/cycle';
 
@@ -11,7 +12,7 @@ export function CycleOptions({ kind, flow, mucus, onFlow, onMucus, disabled = fa
   return <View style={[g.card, { padding: theme.spacing.sm, gap: theme.spacing.sm }]}>
     <Text style={[g.body, { fontStyle: 'italic', fontSize: 13 }]}>Optional · {kind === 'menstrual' ? 'Period flow' : 'Cervical mucus'}</Text>
     {kind === 'menstrual' ? <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
-      {(['spotting', 'light', 'normal', 'heavy'] as const).map((value, index) => <Pressable key={value} accessibilityRole="button" accessibilityLabel={`${value} flow`} accessibilityState={{ selected: flow === value }} aria-pressed={flow === value} disabled={disabled} onPress={() => onFlow(flow === value ? undefined : value)} style={[g.outlineButton, { flex: 1, paddingHorizontal: 2, borderColor: flow === value ? theme.colors.todayPeriod : theme.colors.border, backgroundColor: flow === value ? theme.colors.roseWash : theme.colors.surface, alignItems: 'center', gap: 8 }]}>
+      {(['spotting', 'light', 'normal', 'heavy'] as const).map((value, index) => <Pressable key={value} accessibilityRole="button" accessibilityLabel={`${value} flow`} accessibilityState={{ selected: flow === value }} aria-pressed={flow === value} disabled={disabled} onPress={() => onFlow(flow === value ? undefined : value)} style={[g.outlineButton, { flex: 1, paddingHorizontal: 2, borderColor: flow === value ? theme.colors.todayPeriod : theme.colors.border, backgroundColor: flow === value ? theme.colors.roseWash : theme.colors.surface, alignItems: 'center', gap: theme.spacing.sm }]}>
         <View style={{ width: 20, height: 24, alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ width: 17, height: 17, borderTopLeftRadius: 2, borderTopRightRadius: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, transform: [{ rotate: '45deg' }], backgroundColor: theme.colors.todayPeriod, opacity: [0.3, 0.5, 0.75, 1][index] }} />
         </View>
