@@ -1,0 +1,7 @@
+{
+  "Parameters": {
+    "DbClass": "db.t4g.small",
+    "BackupDays": 14,
+    "Protect": "true"
+  }
+}
