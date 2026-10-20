@@ -15,7 +15,7 @@ STACKS = (
     "ses", "lambda", "routing", "cognito-finalize", "monitoring",
 )
 ALLOWED = {"dev", "stage", "prod"}
-PARAM = re.compile(r"^  ([A-Za-z][A-Za-z0-9]*):(?:\\s|$)")
+PARAM = re.compile(r"^  ([A-Za-z][A-Za-z0-9]*):(?:\s|$)")
 
 
 def read_parameters(path):
