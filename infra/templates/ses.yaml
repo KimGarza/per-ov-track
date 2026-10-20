@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  env:
+    Type: String
+    AllowedValues: [dev, stage, prod]
+  SenderEmail: {Type: String}
+Resources:
+  Identity:
+    Type: AWS::SES::EmailIdentity
+    Properties: {EmailIdentity: !Ref SenderEmail}
+  ConfigurationSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties: {Name: !Sub 'crimrhyth-${env}-email'}
+Outputs:
+  Sender:
+    Value: !Ref SenderEmail
+    Export: {Name: !Sub 'crimrhyth-${env}-SenderEmail'}
