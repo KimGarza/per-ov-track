@@ -1,0 +1,7 @@
+{
+  "Parameters": {
+    "DbClass": "db.t4g.micro",
+    "BackupDays": 7,
+    "Protect": "false"
+  }
+}

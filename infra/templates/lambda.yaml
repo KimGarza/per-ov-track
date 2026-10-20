@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  env:
+    Type: String
+    AllowedValues: [dev, stage, prod]
+  ArtifactBucket: {Type: String}
+  ArtifactKey: {Type: String}
+Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'crimrhyth-${env}-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: [lambda.amazonaws.com]}, Action: ['sts:AssumeRole']}]
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      Policies:
+        - PolicyName: ReadDatabaseSecret
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [secretsmanager:GetSecretValue]
+                Resource: !ImportValue {Fn::Sub: 'crimrhyth-${env}-DatabaseSecretArn'}
+  ApiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'crimrhyth-${env}-api-handler'
+      Runtime: nodejs22.x
+      Handler: index.handler
+      Role: !GetAtt ExecutionRole.Arn
+      Code: {S3Bucket: !Ref ArtifactBucket, S3Key: !Ref ArtifactKey}
+      Timeout: 20
+      MemorySize: 512
+      VpcConfig:
+        SubnetIds:
+          - !ImportValue {Fn::Sub: 'crimrhyth-${env}-SubnetAId'}
+          - !ImportValue {Fn::Sub: 'crimrhyth-${env}-SubnetBId'}
+        SecurityGroupIds:
+          - !ImportValue {Fn::Sub: 'crimrhyth-${env}-LambdaGroupId'}
+      Environment:
+        Variables:
+          APP_ENV: !Ref env
+          DB_HOST: !ImportValue {Fn::Sub: 'crimrhyth-${env}-DatabaseEndpoint'}
+          DB_SECRET_ARN: !ImportValue {Fn::Sub: 'crimrhyth-${env}-DatabaseSecretArn'}
+Outputs:
+  ApiArn:
+    Value: !GetAtt ApiFunction.Arn
+    Export: {Name: !Sub 'crimrhyth-${env}-ApiFunctionArn'}

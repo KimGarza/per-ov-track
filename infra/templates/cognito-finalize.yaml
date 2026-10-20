@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  env:
+    Type: String
+    AllowedValues: [dev, stage, prod]
+  CallbackUrl: {Type: String}
+  LogoutUrl: {Type: String}
+Resources:
+  MobileClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub 'crimrhyth-${env}-mobile-client'
+      UserPoolId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      SupportedIdentityProviders: [COGNITO]
+      CallbackURLs: [!Ref CallbackUrl]
+      LogoutURLs: [!Ref LogoutUrl]
+      PreventUserExistenceErrors: ENABLED
+Outputs:
+  ClientId:
+    Value: !Ref MobileClient
+    Export: {Name: !Sub 'crimrhyth-${env}-UserPoolClientId'}
