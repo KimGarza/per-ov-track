@@ -1,79 +1,79 @@
-name: Deploy network
+name: Deploy CloudFormation infrastructure
+
 on:
   push:
-    branches: [dev]
+    branches: [dev, stage, main]
     paths:
+      - 'infra/**'
+      - 'scripts/infra/prepare-parameters.py'
       - '.github/workflows/deploy-infra.yml'
-      - 'infra/templates/network.yml'
-      - 'infra/overrides/dev/_global.json'
-      - 'infra/overrides/dev/network.json'
-      - 'scripts/infra/prepare-network.py'
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 concurrency:
-  group: crimson-rhythm-network-${{ github.ref_name }}
+  group: crimrhyth-infra-${{ github.ref_name }}
   cancel-in-progress: false
+
 jobs:
-  deploy-network:
-    if: github.event_name == 'push'
+  infrastructure:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        # Branch -> target environments. Add future branches to on.push.branches too.
-        environment: ${{ fromJSON('{"dev":["dev"]}')[github.ref_name] }}
+        environment: ${{ fromJSON('{"dev":["dev"],"stage":["stage"],"main":["prod"]}')[github.ref_name] }}
     environment: ${{ matrix.environment }}
     permissions:
       contents: read
       id-token: write
     env:
-      DEPLOY_ENVIRONMENT: ${{ matrix.environment }}
-      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      DEPLOY_ENV: ${{ matrix.environment }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate configuration and merge global + network overrides
+      - name: Validate environment configuration
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$AWS_ROLE_ARN" ]]; then
-            echo '::error::Set AWS_ROLE_ARN in the GitHub dev environment before deployment.'
-            exit 1
-          fi
-          python scripts/infra/prepare-network.py --environment "$DEPLOY_ENVIRONMENT" --output "$RUNNER_TEMP/network-parameters.json"
-          stack_name=$(jq -r '.Environment + "-" + .ProjectName + "-network"' "$RUNNER_TEMP/network-parameters.json")
-          echo "STACK_NAME=$stack_name" >> "$GITHUB_ENV"
-      - name: Connect to AWS using GitHub OIDC
+          test -n "$AWS_REGION" || { echo "::error::Set AWS_REGION in the GitHub environment"; exit 1; }
+          test -n "$AWS_ROLE_ARN" || { echo "::error::Set AWS_ROLE_ARN in the GitHub environment"; exit 1; }
+          python scripts/infra/prepare-parameters.py --environment "$DEPLOY_ENV" --output "$RUNNER_TEMP/parameters.json"
+      - name: Assume existing AWS deployment role via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: crimson-rhythm-network-${{ github.run_id }}
-      - name: Validate VPC template with CloudFormation
-        run: aws cloudformation validate-template --template-body file://infra/templates/network.yml > /dev/null
-      - name: Deploy networking only
+          role-session-name: crimrhyth-infra-${{ github.run_id }}
+      - name: Verify assumed identity
+        run: aws sts get-caller-identity
+      - name: Validate CloudFormation templates
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t parameters < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$RUNNER_TEMP/network-parameters.json")
-          echo "Deploying $STACK_NAME from infra/templates/network.yml"
-          aws cloudformation deploy \
-            --template-file infra/templates/network.yml \
-            --stack-name "$STACK_NAME" \
-            --parameter-overrides "${parameters[@]}" \
-            --tags Environment="$DEPLOY_ENVIRONMENT" Project=crimson-rhythm \
-            --no-fail-on-empty-changeset
-      - name: Report network outputs
-        run: aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs' --output table
-      - name: Report deployment failure
-        if: failure()
+          for template in infra/templates/*.yaml; do
+            aws cloudformation validate-template --template-body "file://$template" >/dev/null
+          done
+      - name: Deploy ordered infrastructure stacks
         shell: bash
         run: |
-          echo '::error::Dev networking failed. Review the failed step; no other infrastructure stack is targeted.'
-          if [[ -n "${STACK_NAME:-}" && -n "${AWS_ACCESS_KEY_ID:-}" ]]; then
-            aws cloudformation describe-stack-events --stack-name "$STACK_NAME" --max-items 20 --output table || true
-          fi
+          set -euo pipefail
+          stacks=(network security secrets rds cognito-base ses lambda routing cognito-finalize monitoring)
+          for stack in "${stacks[@]}"; do
+            stack_name="crimrhyth-${DEPLOY_ENV}-${stack}"
+            mapfile -t params < <(jq -r --arg stack "$stack" '.[$stack][] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/parameters.json")
+            echo "::group::Deploy $stack_name"
+            aws cloudformation deploy \
+              --template-file "infra/templates/$stack.yaml" \
+              --stack-name "$stack_name" \
+              --parameter-overrides "${params[@]}" \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --no-fail-on-empty-changeset
+            aws cloudformation describe-stacks --stack-name "$stack_name" --query 'Stacks[0].Outputs' --output json
+            echo "::endgroup::"
+          done
