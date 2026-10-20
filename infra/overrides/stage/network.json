@@ -1,0 +1,7 @@
+{
+  "Parameters": {
+    "VpcCidr": "10.20.0.0/16",
+    "SubnetACidr": "10.20.10.0/24",
+    "SubnetBCidr": "10.20.11.0/24"
+  }
+}
