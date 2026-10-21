@@ -1,37 +1,29 @@
-name: Deploy Environment Infra
+name: Deploy infra
 on:
   push:
-    branches: [dev, stage, prod]
+    branches: [dev]
     paths:
-      - '.【entity-github¦canonical_name=GitHub】/workflows/deploy-infra.yml'
+      - '.github/workflows/deploy-infra.yml'
       - 'infra/templates/network.yaml'
       - 'infra/overrides/dev/global.json'
       - 'infra/overrides/dev/network.json'
-      - 'infra/overrides/stage/global.json'
-      - 'infra/overrides/stage/network.json'
-      - 'infra/overrides/prod/global.json'
-      - 'infra/overrides/prod/network.json'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: crimrhyth-network-${{ 【entity-github¦canonical_name=GitHub】.ref_name }}
+  group: crimrhyth-network-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  deploy-infra:
+  deploy-network:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        environment: ${{ fromJSON(
-          【entity-github¦canonical_name=GitHub】.ref_name == 'dev' && '["dev"]' ||
-          【entity-github¦canonical_name=GitHub】.ref_name == 'stage' && '["stage"]' ||
-          '["prod"]'
-         ) }}
+        environment: ${{ fromJSON('{"dev":["dev"]}')[github.ref_name] }}
     environment: ${{ matrix.environment }}
     permissions:
       contents: read
@@ -46,8 +38,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$AWS_REGION" || { echo "::error::Set AWS_REGION in the 【entity-GitHub¦canonical_name=GitHub】 environment"; exit 1; }
-          test -n "$AWS_ROLE_ARN" || { echo "::error::Set AWS_ROLE_ARN in the 【entity-GitHub¦canonical_name=GitHub】 environment"; exit 1; }
+          test -n "$AWS_REGION" || { echo "::error::Set AWS_REGION in the GitHub environment"; exit 1; }
+          test -n "$AWS_ROLE_ARN" || { echo "::error::Set AWS_ROLE_ARN in the GitHub environment"; exit 1; }
 
           override_dir="infra/overrides/$DEPLOY_ENVIRONMENT"
           jq -e --arg env "$DEPLOY_ENVIRONMENT" '.Parameters.env == $env' "$override_dir/global.json" >/dev/null
@@ -59,15 +51,15 @@ jobs:
           jq -e 'length == 4 and all(.[]; (.ParameterValue | length) > 0)' "$RUNNER_TEMP/merged.json" >/dev/null
           echo "STACK_NAME=crimrhyth-$DEPLOY_ENVIRONMENT-network" >> "$GITHUB_ENV"
 
-      - name: Connect to 【entity-AWS¦canonical_name=AWS】 using 【entity-GitHub¦canonical_name=GitHub】 OIDC
-        uses: 【entity-aws¦canonical_name=AWS】-actions/configure-【entity-aws¦canonical_name=AWS】-credentials@v4
+      - name: Connect to AWS using GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          【entity-aws¦canonical_name=AWS】-region: ${{ env.AWS_REGION }}
-          role-session-name: crimrhyth-network-${{ 【entity-github¦canonical_name=GitHub】.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: crimrhyth-network-${{ github.run_id }}
 
       - name: Validate VPC template with CloudFormation
-        run: 【entity-aws¦canonical_name=AWS】 cloudformation validate-template --template-body file://infra/templates/network.yaml > /dev/null
+        run: aws cloudformation validate-template --template-body file://infra/templates/network.yaml > /dev/null
 
       - name: Deploy networking only
         shell: bash
@@ -90,5 +82,5 @@ jobs:
         run: |
           echo '::error::Network deployment failed. No other infrastructure stack is targeted.'
           if [[ -n "${STACK_NAME:-}" && -n "${AWS_ACCESS_KEY_ID:-}" ]]; then
-            【entity-aws¦canonical_name=AWS】 cloudformation describe-stack-events --stack-name "$STACK_NAME" --max-items 20 --output table || true
+            aws cloudformation describe-stack-events --stack-name "$STACK_NAME" --max-items 20 --output table || true
           fi
