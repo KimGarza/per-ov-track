@@ -36,6 +36,39 @@ jobs:
               - 'infra/templates/network.yml'
               - 'infra/overrides/${{ matrix.environment }}/network.json'
               - 'infra/overrides/${{ matrix.environment }}/_global.json'
+            security:
+              - 'infra/templates/security.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
+              - 'infra/overrides/${{ matrix.environment }}/security.json'
+            secrets:
+              - 'infra/templates/secrets.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
+              - 'infra/overrides/${{ matrix.environment }}/secrets.json'
+            cognito-base:
+              - 'infra/templates/cognito-base.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
+            rds:
+              - 'infra/templates/rds.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
+              - 'infra/overrides/${{ matrix.environment }}/rds.json'
+            ses:
+              - 'infra/templates/ses.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
+              - 'infra/overrides/${{ matrix.environment }}/ses.json'
+            lambda:
+              - 'infra/templates/lambda.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
+              - 'infra/overrides/${{ matrix.environment }}/lambda.json'
+            routing:
+              - 'infra/templates/routing.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
+            cognito-finalize:
+              - 'infra/templates/cognito-finalize.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
+              - 'infra/overrides/${{ matrix.environment }}/cognito-finalize.json'
+            monitoring:
+              - 'infra/templates/monitoring.yml'
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -152,5 +185,374 @@ jobs:
             --stack-name crimrhyth-${ENV_NAME}-network \
             --parameter-overrides $OVERRIDES \
             --capabilities CAPABILITY_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy security when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['security'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-security"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/security-status" 2> "$RUNNER_TEMP/security-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/security-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/security-error"; then
+            cat "$RUNNER_TEMP/security-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          if [[ -s "$ENV_DIR/security.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/security.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/security-params.json"
+          else
+            jq -n --slurpfile global "$ENV_DIR/global.json" \
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/security-params.json"
+          fi
+          
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/security-params.json")
+          echo "Deploying $STACK using infra/templates/security.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/security.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy secrets when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['secrets'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-secrets"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/secrets-status" 2> "$RUNNER_TEMP/secrets-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/secrets-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/secrets-error"; then
+            cat "$RUNNER_TEMP/secrets-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          if [[ -s "$ENV_DIR/secrets.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/secrets.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/secrets-params.json"
+          else
+            jq -n --slurpfile global "$ENV_DIR/global.json" \
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/secrets-params.json"
+          fi
+          
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/secrets-params.json")
+          echo "Deploying $STACK using infra/templates/secrets.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/secrets.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy cognito-base when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['cognito-base'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-cognito-base"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/cognito-base-status" 2> "$RUNNER_TEMP/cognito-base-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/cognito-base-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/cognito-base-error"; then
+            cat "$RUNNER_TEMP/cognito-base-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          jq -n --slurpfile global "$ENV_DIR/global.json" \
+            '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-base-params.json"
+          
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/cognito-base-params.json")
+          echo "Deploying $STACK using infra/templates/cognito-base.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/cognito-base.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy rds when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['rds'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-rds"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/rds-status" 2> "$RUNNER_TEMP/rds-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/rds-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/rds-error"; then
+            cat "$RUNNER_TEMP/rds-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          if [[ -s "$ENV_DIR/rds.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/rds.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/rds-params.json"
+          else
+            jq -n --slurpfile global "$ENV_DIR/global.json" \
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/rds-params.json"
+          fi
+          
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/rds-params.json")
+          echo "Deploying $STACK using infra/templates/rds.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/rds.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy ses when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['ses'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-ses"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/ses-status" 2> "$RUNNER_TEMP/ses-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/ses-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/ses-error"; then
+            cat "$RUNNER_TEMP/ses-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          if [[ -s "$ENV_DIR/ses.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/ses.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/ses-params.json"
+          else
+            jq -n --slurpfile global "$ENV_DIR/global.json" \
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/ses-params.json"
+          fi
+          for key in "SenderEmail"; do
+            if ! jq -e --arg key "$key" 'any(.[]; .ParameterKey == $key and (.ParameterValue | length > 0))' "$RUNNER_TEMP/ses-params.json" >/dev/null; then
+              echo "::notice::SKIP $STACK: required $key is not configured in the environment overrides."
+              exit 0
+            fi
+          done
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/ses-params.json")
+          echo "Deploying $STACK using infra/templates/ses.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/ses.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy lambda when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['lambda'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-lambda"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/lambda-status" 2> "$RUNNER_TEMP/lambda-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/lambda-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/lambda-error"; then
+            cat "$RUNNER_TEMP/lambda-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          if [[ -s "$ENV_DIR/lambda.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/lambda.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/lambda-params.json"
+          else
+            jq -n --slurpfile global "$ENV_DIR/global.json" \
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/lambda-params.json"
+          fi
+          for key in "ArtifactBucket" "ArtifactKey"; do
+            if ! jq -e --arg key "$key" 'any(.[]; .ParameterKey == $key and (.ParameterValue | length > 0))' "$RUNNER_TEMP/lambda-params.json" >/dev/null; then
+              echo "::notice::SKIP $STACK: required $key is not configured in the environment overrides."
+              exit 0
+            fi
+          done
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/lambda-params.json")
+          echo "Deploying $STACK using infra/templates/lambda.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/lambda.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy routing when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['routing'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-routing"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/routing-status" 2> "$RUNNER_TEMP/routing-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/routing-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/routing-error"; then
+            cat "$RUNNER_TEMP/routing-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          jq -n --slurpfile global "$ENV_DIR/global.json" \
+            '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/routing-params.json"
+          
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/routing-params.json")
+          echo "Deploying $STACK using infra/templates/routing.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/routing.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy cognito-finalize when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['cognito-finalize'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-cognito-finalize"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/cognito-finalize-status" 2> "$RUNNER_TEMP/cognito-finalize-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/cognito-finalize-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/cognito-finalize-error"; then
+            cat "$RUNNER_TEMP/cognito-finalize-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          if [[ -s "$ENV_DIR/cognito-finalize.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/cognito-finalize.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
+          else
+            jq -n --slurpfile global "$ENV_DIR/global.json" \
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
+          fi
+          for key in "CallbackUrl" "LogoutUrl"; do
+            if ! jq -e --arg key "$key" 'any(.[]; .ParameterKey == $key and (.ParameterValue | length > 0))' "$RUNNER_TEMP/cognito-finalize-params.json" >/dev/null; then
+              echo "::notice::SKIP $STACK: required $key is not configured in the environment overrides."
+              exit 0
+            fi
+          done
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/cognito-finalize-params.json")
+          echo "Deploying $STACK using infra/templates/cognito-finalize.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/cognito-finalize.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy monitoring when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['monitoring'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-monitoring"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/monitoring-status" 2> "$RUNNER_TEMP/monitoring-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/monitoring-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/monitoring-error"; then
+            cat "$RUNNER_TEMP/monitoring-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          jq -n --slurpfile global "$ENV_DIR/global.json" \
+            '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/monitoring-params.json"
+          
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/monitoring-params.json")
+          echo "Deploying $STACK using infra/templates/monitoring.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/monitoring.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
             --region us-east-1 \
             --no-fail-on-empty-changeset
