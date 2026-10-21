@@ -35,46 +35,7 @@ jobs:
             network:
               - 'infra/templates/network.yml'
               - 'infra/overrides/${{ matrix.environment }}/network.json'
-              - 'infra/overrides/${{ matrix.environment }}/_global.json'
-
-      - name: Diagnose GitHub OIDC identity (safe claims only)
-        shell: bash
-        env:
-          EXPECTED_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
-          DEPLOY_ENVIRONMENT: ${{ matrix.environment }}
-        run: |
-          set -euo pipefail
-          echo "GitHub repository: $GITHUB_REPOSITORY"
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub environment: $DEPLOY_ENVIRONMENT"
-          if [[ ! "$EXPECTED_ROLE_ARN" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
-            echo "::error::AWS_ROLE_ARN is missing or is not an IAM role ARN"
-            exit 1
-          fi
-          echo "Target role name: ${EXPECTED_ROLE_ARN##*/}"
-          if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
-            echo "::error::GitHub OIDC token request environment is unavailable (check id-token: write)"
-            exit 1
-          fi
-          # Never print the token or HTTP response. Print only the claims needed to compare IAM trust conditions.
-          response=$(curl --fail --silent --show-error --get \
-            --data-urlencode 'audience=sts.amazonaws.com' \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL")
-          token=$(jq -er '.value' <<< "$response")
-          OIDC_JWT="$token" node - <<'NODE'
-          const jwt = process.env.OIDC_JWT;
-          const part = jwt?.split('.')[1];
-          if (!part) throw new Error('GitHub returned an invalid OIDC JWT');
-          const claims = JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
-          for (const key of ['iss', 'aud', 'sub', 'repository', 'ref', 'environment']) {
-            console.log(key + ': ' + JSON.stringify(claims[key] ?? null));
-          }
-          const expectedSub = 'repo:' + process.env.GITHUB_REPOSITORY + ':environment:' + process.env.DEPLOY_ENVIRONMENT;
-          console.log('Expected environment subject: ' + expectedSub);
-          console.log('Subject matches expected: ' + (claims.sub === expectedSub));
-          console.log('Audience matches STS: ' + (claims.aud === 'sts.amazonaws.com'));
-          NODE
+              - 'infra/overrides/${{ matrix.environment }}/global.json'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -86,18 +47,19 @@ jobs:
         if: steps.filter.outputs.network == 'true'
         run: |
           ENV_DIR="infra/overrides/${{ matrix.environment }}"
-          jq -s 'add' $ENV_DIR/_global.json $ENV_DIR/network.json > merged.json
+          jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile network "$ENV_DIR/network.json" \
+            '($global[0].Parameters + $network[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > merged.json
           echo "Merged params:"
           cat merged.json
 
           OVERRIDES=$(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' merged.json | tr '\n' ' ')
-          ENV_NAME=$(jq -r '.[] | select(.ParameterKey=="Environment") |.ParameterValue' merged.json)
+          ENV_NAME=$(jq -r '.[] | select(.ParameterKey=="env") | .ParameterValue' merged.json)
 
           echo "Deploying stack: $ENV_NAME-network"
 
           aws cloudformation deploy \
             --template-file infra/templates/network.yml \
-            --stack-name ${ENV_NAME}-network \
+            --stack-name crimrhyth-${ENV_NAME}-network \
             --parameter-overrides $OVERRIDES \
             --capabilities CAPABILITY_IAM \
             --region us-east-1 \
