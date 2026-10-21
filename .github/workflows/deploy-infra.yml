@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - dev
-    workflow_dispatch:
 
 permissions:
   id-token: write
@@ -44,16 +43,72 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
+      - name: Check if network stack exists
+        id: stack
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          STACK_NAME="crimrhyth-${{ matrix.environment }}-network"
+
+          echo "Checking CloudFormation stack: $STACK_NAME"
+
+          if aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --region us-east-1 \
+            --output json > stack-result.json 2> stack-error.txt; then
+
+            STACK_STATUS=$(jq -r '.Stacks[0].StackStatus' stack-result.json)
+
+            echo "Stack found: $STACK_NAME"
+            echo "Stack status: $STACK_STATUS"
+
+            if [[ "$STACK_STATUS" == "DELETE_COMPLETE" ]]; then
+              echo "Stack was deleted."
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+
+            elif [[ "$STACK_STATUS" == "ROLLBACK_COMPLETE" ]]; then
+              echo "::error::Stack is in ROLLBACK_COMPLETE. Manual cleanup is required before redeployment."
+              exit 1
+
+            elif [[ "$STACK_STATUS" == *"_IN_PROGRESS" ]]; then
+              echo "::error::Stack operation is already in progress: $STACK_STATUS"
+              exit 1
+
+            elif [[ "$STACK_STATUS" == *"_FAILED" || "$STACK_STATUS" == *"ROLLBACK"* ]]; then
+              echo "::error::Stack requires attention: $STACK_STATUS"
+              exit 1
+
+            else
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+            fi
+
+          else
+            ERROR=$(cat stack-error.txt)
+
+            if [[ "$ERROR" == *"does not exist"* ]]; then
+              echo "Network stack does not exist."
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::Unable to verify CloudFormation stack."
+              echo "$ERROR"
+              exit 1
+            fi
+          fi
+
       - name: Merge _global + network and Deploy
-        if: steps.filter.outputs.network == 'true'
+        if: steps.filter.outputs.network == 'true' || steps.stack.outputs.exists == 'false'
         run: |
           ENV_DIR="infra/overrides/${{ matrix.environment }}"
+
           jq -n --slurpfile global "$ENV_DIR/_global.json" --slurpfile network "$ENV_DIR/network.json" \
             '($global[0].Parameters + $network[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > merged.json
+
           echo "Merged params:"
           cat merged.json
 
           OVERRIDES=$(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' merged.json | tr '\n' ' ')
+
           ENV_NAME=$(jq -r '.[] | select(.ParameterKey=="env") | .ParameterValue' merged.json)
 
           echo "Deploying stack: $ENV_NAME-network"
