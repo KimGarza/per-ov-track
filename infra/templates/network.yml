@@ -1,74 +1,40 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Crimson Rhythm foundational VPC and isolated subnets; routing and security are separate.
 Parameters:
-  Environment:
+  env:
     Type: String
     AllowedValues: [dev, stage, prod]
-  ProjectName:
-    Type: String
-    AllowedPattern: '[a-z][a-z0-9-]*'
-  VpcCidr:
-    Type: String
-  PrivateSubnetACidr:
-    Type: String
-  PrivateSubnetBCidr:
-    Type: String
+  VpcCidr: {Type: String}
+  SubnetACidr: {Type: String}
+  SubnetBCidr: {Type: String}
 Resources:
-  VPC:
+  Vpc:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref VpcCidr
       EnableDnsSupport: true
       EnableDnsHostnames: true
-      Tags:
-        - Key: Name
-          Value: !Sub '${Environment}-${ProjectName}-vpc'
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: !Ref ProjectName
-  PrivateSubnetA:
+      Tags: [{Key: Name, Value: !Sub 'crimrhyth-${env}-vpc'}]
+  SubnetA:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Ref PrivateSubnetACidr
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref SubnetACidr
       AvailabilityZone: !Select [0, !GetAZs '']
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub '${Environment}-${ProjectName}-private-a'
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: !Ref ProjectName
-  PrivateSubnetB:
+      Tags: [{Key: Name, Value: !Sub 'crimrhyth-${env}-private-a'}]
+  SubnetB:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Ref PrivateSubnetBCidr
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref SubnetBCidr
       AvailabilityZone: !Select [1, !GetAZs '']
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub '${Environment}-${ProjectName}-private-b'
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: !Ref ProjectName
+      Tags: [{Key: Name, Value: !Sub 'crimrhyth-${env}-private-b'}]
 Outputs:
-  VPCID:
-    Value: !Ref VPC
-    Export:
-      Name: !Sub '${Environment}-${ProjectName}-vpc-id'
-  VpcCidr:
-    Value: !Ref VpcCidr
-    Export:
-      Name: !Sub '${Environment}-${ProjectName}-vpc-cidr'
-  PrivateSubnetAId:
-    Value: !Ref PrivateSubnetA
-    Export:
-      Name: !Sub '${Environment}-${ProjectName}-private-a-id'
-  PrivateSubnetBId:
-    Value: !Ref PrivateSubnetB
-    Export:
-      Name: !Sub '${Environment}-${ProjectName}-private-b-id'
+  VpcId:
+    Value: !Ref Vpc
+    Export: {Name: !Sub 'crimrhyth-${env}-VpcId'}
+  SubnetAId:
+    Value: !Ref SubnetA
+    Export: {Name: !Sub 'crimrhyth-${env}-SubnetAId'}
+  SubnetBId:
+    Value: !Ref SubnetB
+    Export: {Name: !Sub 'crimrhyth-${env}-SubnetBId'}

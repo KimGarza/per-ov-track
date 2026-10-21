@@ -1,7 +1,9 @@
-# crimrhyth infrastructure
+# Crimson Rhythm infrastructure
 
-Shared CloudFormation templates use the `env` parameter (dev, stage, prod) and hardcoded `crimrhyth` prefix. Environment overrides live in `infra/overrides/<env>/global.json`, with optional resource-specific JSON. No deployment workflows or AWS changes are included.
+CloudFormation templates use `.yml` only, shared `env` parameters (dev/stage/prod), and the `crimrhyth` prefix. Per-environment overrides live under `infra/overrides/<env>/global.json` and resource-specific JSON files, with parameters nested under `Parameters`.
 
-Planned order: network, security, secrets, RDS, Cognito base, SES, Lambda, API routing, Cognito finalize, storage, monitoring. Prisma migrations remain a separate workflow.
+The GitHub Actions infrastructure workflow currently deploys the network stack only. Other templates are not automatically deployed. Validate resources, parameter overrides and cross-stack dependencies before enabling other stacks.
 
-These templates are scaffolding and require validation and application-specific wiring before deployment.
+The secrets template combines generated database credentials with retained Google, Apple, and Cognito configuration secret shells. Do not commit real secrets.
+
+**Existing stack caution:** the newer network template uses different CloudFormation logical IDs, parameter names and export names than the previous network template. Applying it to an existing stack may replace resources or fail if exports are consumed.
