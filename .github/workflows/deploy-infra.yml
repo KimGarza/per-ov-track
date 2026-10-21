@@ -96,6 +96,40 @@ jobs:
             fi
           fi
 
+      - name: Explain network deployment decision
+        if: always()
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs.network }}
+          STACK_EXISTS: ${{ steps.stack.outputs.exists }}
+          FILTER_RESULT: ${{ steps.filter.outcome }}
+          STACK_RESULT: ${{ steps.stack.outcome }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          echo "::group::Network deployment decision"
+          echo "Target environment: $TARGET_ENV"
+          echo "Target stack: crimrhyth-$TARGET_ENV-network"
+          echo "AWS region: us-east-1"
+          echo "Path filter step: $FILTER_RESULT"
+          echo "Network files changed: ${FILES_CHANGED:-<not set>}"
+          echo "Stack check step: $STACK_RESULT"
+          echo "Stack exists: ${STACK_EXISTS:-<not set>}"
+          if [[ "$FILTER_RESULT" != "success" || "$STACK_RESULT" != "success" ]]; then
+            echo "::warning::DEPLOYMENT BLOCKED: A prerequisite check did not succeed."
+          elif [[ "$FILES_CHANGED" == "true" ]]; then
+            echo "DECISION: DEPLOY network because matching files changed."
+          elif [[ "$STACK_EXISTS" == "false" ]]; then
+            echo "DECISION: DEPLOY network because the CloudFormation stack is missing."
+          elif [[ "$STACK_EXISTS" == "true" && "$FILES_CHANGED" == "false" ]]; then
+            echo "DECISION: SKIP network because no matching files changed and the stack exists."
+          else
+            echo "::warning::DEPLOYMENT BLOCKED: Unexpected or missing filter/stack outputs."
+          fi
+          echo "Template present: $(test -f infra/templates/network.yml && echo yes || echo no)"
+          echo "Global override present: $(test -f "infra/overrides/$TARGET_ENV/_global.json" && echo yes || echo no)"
+          echo "Network override present: $(test -f "infra/overrides/$TARGET_ENV/network.json" && echo yes || echo no)"
+          echo "::endgroup::"
+
       - name: Merge _global + network and Deploy
         if: steps.filter.outputs.network == 'true' || steps.stack.outputs.exists == 'false'
         run: |
