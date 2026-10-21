@@ -12,50 +12,51 @@ permissions:
 jobs:
   deploy-infra:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         environment: ${{ fromJSON(
           github.ref_name == 'dev' && '["dev"]' ||
           github.ref_name == 'stage' && '["stage"]' ||
           '["prod"]'
-         ) }}
+          ) }}
 
-  environment: ${{ matrix.environment }}
+    environment: ${{ matrix.environment }}
 
-  steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Check if environment infra changed
-      id: filter
-      uses: dorny/paths-filter@v3
-      with:
-        filters: |
-           network:
+      - name: Check if environment infra changed
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            network:
               - 'infra/templates/network.yml'
               - 'infra/overrides/${{ matrix.environment }}/network.json'
               - 'infra/overrides/${{ matrix.environment }}/_global.json'
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-        aws-region: us-east-1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
 
-    - name: Merge _global + network and Deploy
-      if: steps.filter.outputs.network == 'true'
-      run: |
-        ENV_DIR="infra/overrides/${{ matrix.environment }}"
-        jq -s 'add' $ENV_DIR/_global.json $ENV_DIR/network.json > merged.json
-        echo "Merged params:"
-        cat merged.json
+      - name: Merge _global + network and Deploy
+        if: steps.filter.outputs.network == 'true'
+        run: |
+          ENV_DIR="infra/overrides/${{ matrix.environment }}"
+          jq -s 'add' $ENV_DIR/_global.json $ENV_DIR/network.json > merged.json
+          echo "Merged params:"
+          cat merged.json
 
-        OVERRIDES=$(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' merged.json | tr '\n' ' ')
-        ENV_NAME=$(jq -r '.[] | select(.ParameterKey=="Environment") |.ParameterValue' merged.json)
+          OVERRIDES=$(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' merged.json | tr '\n' ' ')
+          ENV_NAME=$(jq -r '.[] | select(.ParameterKey=="Environment") |.ParameterValue' merged.json)
 
-        echo "Deploying stack: $ENV_NAME-network"
+          echo "Deploying stack: $ENV_NAME-network"
 
-         aws cloudformation deploy \
+          aws cloudformation deploy \
             --template-file infra/templates/network.yml \
             --stack-name ${ENV_NAME}-network \
             --parameter-overrides $OVERRIDES \
