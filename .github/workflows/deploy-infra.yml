@@ -4,24 +4,25 @@ on:
     branches: [dev]
     paths:
       - '.github/workflows/deploy-infra.yml'
-      - 'infra/templates/network.yml'
-      - 'infra/overrides/dev/_global.json'
+      - 'infra/templates/network.yaml'
+      - 'infra/overrides/dev/global.json'
       - 'infra/overrides/dev/network.json'
-      - 'scripts/infra/prepare-network.py'
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 concurrency:
-  group: crimson-rhythm-network-${{ github.ref_name }}
+  group: crimrhyth-network-${{ github.ref_name }}
   cancel-in-progress: false
+
 jobs:
   deploy-network:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        # Branch -> target environments. Add future branches to on.push.branches too.
         environment: ${{ fromJSON('{"dev":["dev"]}')[github.ref_name] }}
     environment: ${{ matrix.environment }}
     permissions:
@@ -29,51 +30,57 @@ jobs:
       id-token: write
     env:
       DEPLOY_ENVIRONMENT: ${{ matrix.environment }}
-      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Validate configuration and merge global + network overrides
+      - name: Merge global and network overrides using jq
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$AWS_ROLE_ARN" ]]; then
-            echo '::error::Set AWS_ROLE_ARN in the GitHub dev environment before deployment.'
-            exit 1
-          fi
-          python scripts/infra/prepare-network.py --environment "$DEPLOY_ENVIRONMENT" --output "$RUNNER_TEMP/network-parameters.json"
-          stack_name=$(jq -r '.Environment + "-" + .ProjectName + "-network"' "$RUNNER_TEMP/network-parameters.json")
-          echo "STACK_NAME=$stack_name" >> "$GITHUB_ENV"
+          test -n "$AWS_REGION" || { echo "::error::Set AWS_REGION in the GitHub environment"; exit 1; }
+          test -n "$AWS_ROLE_ARN" || { echo "::error::Set AWS_ROLE_ARN in the GitHub environment"; exit 1; }
+
+          override_dir="infra/overrides/$DEPLOY_ENVIRONMENT"
+          jq -e --arg env "$DEPLOY_ENVIRONMENT" '.Parameters.env == $env' "$override_dir/global.json" >/dev/null
+          jq -n \
+            --slurpfile global "$override_dir/global.json" \
+            --slurpfile network "$override_dir/network.json" \
+            '($global[0].Parameters + $network[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' \
+            > "$RUNNER_TEMP/merged.json"
+          jq -e 'length == 4 and all(.[]; (.ParameterValue | length) > 0)' "$RUNNER_TEMP/merged.json" >/dev/null
+          echo "STACK_NAME=crimrhyth-$DEPLOY_ENVIRONMENT-network" >> "$GITHUB_ENV"
+
       - name: Connect to AWS using GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: crimson-rhythm-network-${{ github.run_id }}
+          role-session-name: crimrhyth-network-${{ github.run_id }}
+
       - name: Validate VPC template with CloudFormation
-        run: aws cloudformation validate-template --template-body file://infra/templates/network.yml > /dev/null
+        run: aws cloudformation validate-template --template-body file://infra/templates/network.yaml > /dev/null
+
       - name: Deploy networking only
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t parameters < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$RUNNER_TEMP/network-parameters.json")
-          echo "Deploying $STACK_NAME from infra/templates/network.yml"
+          mapfile -t overrides < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/merged.json")
+          echo "Deploying $STACK_NAME from infra/templates/network.yaml"
           aws cloudformation deploy \
-            --template-file infra/templates/network.yml \
+            --template-file infra/templates/network.yaml \
             --stack-name "$STACK_NAME" \
-            --parameter-overrides "${parameters[@]}" \
-            --tags Environment="$DEPLOY_ENVIRONMENT" Project=crimson-rhythm \
+            --parameter-overrides "${overrides[@]}" \
             --no-fail-on-empty-changeset
+
       - name: Report network outputs
         run: aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs' --output table
+
       - name: Report deployment failure
         if: failure()
         shell: bash
         run: |
-          echo '::error::Dev networking failed. Review the failed step; no other infrastructure stack is targeted.'
+          echo '::error::Network deployment failed. No other infrastructure stack is targeted.'
           if [[ -n "${STACK_NAME:-}" && -n "${AWS_ACCESS_KEY_ID:-}" ]]; then
             aws cloudformation describe-stack-events --stack-name "$STACK_NAME" --max-items 20 --output table || true
           fi
