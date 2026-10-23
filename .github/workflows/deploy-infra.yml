@@ -306,16 +306,16 @@ jobs:
             --region us-east-1 \
             --no-fail-on-empty-changeset
 
-      - name: Deploy rds when changed or missing
+      - name: Deploy cognito-finalize when changed or missing
         shell: bash
         env:
-          FILES_CHANGED: ${{ steps.filter.outputs['rds'] }}
+          FILES_CHANGED: ${{ steps.filter.outputs['cognito-finalize'] }}
           TARGET_ENV: ${{ matrix.environment }}
         run: |
           set -euo pipefail
-          STACK="crimrhyth-$TARGET_ENV-rds"
-          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/rds-status" 2> "$RUNNER_TEMP/rds-error"; then
-            STATUS=$(cat "$RUNNER_TEMP/rds-status")
+          STACK="crimrhyth-$TARGET_ENV-cognito-finalize"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/cognito-finalize-status" 2> "$RUNNER_TEMP/cognito-finalize-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/cognito-finalize-status")
             if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
               echo "::error::$STACK is in status $STATUS; resolve it before deployment."
               exit 1
@@ -324,23 +324,28 @@ jobs:
               echo "SKIP $STACK: already exists and no matching files changed."
               exit 0
             fi
-          elif ! grep -q 'does not exist' "$RUNNER_TEMP/rds-error"; then
-            cat "$RUNNER_TEMP/rds-error"
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/cognito-finalize-error"; then
+            cat "$RUNNER_TEMP/cognito-finalize-error"
             exit 1
           fi
           ENV_DIR="infra/overrides/$TARGET_ENV"
-          if [[ -s "$ENV_DIR/rds.json" ]]; then
-            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/rds.json" \
-              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/rds-params.json"
+          if [[ -s "$ENV_DIR/cognito-finalize.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/cognito-finalize.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
           else
             jq -n --slurpfile global "$ENV_DIR/global.json" \
-              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/rds-params.json"
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
           fi
-          
-          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/rds-params.json")
-          echo "Deploying $STACK using infra/templates/rds.yml"
+          for key in "CallbackUrl" "LogoutUrl"; do
+            if ! jq -e --arg key "$key" 'any(.[]; .ParameterKey == $key and (.ParameterValue | length > 0))' "$RUNNER_TEMP/cognito-finalize-params.json" >/dev/null; then
+              echo "::notice::SKIP $STACK: required $key is not configured in the environment overrides."
+              exit 0
+            fi
+          done
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/cognito-finalize-params.json")
+          echo "Deploying $STACK using infra/templates/cognito-finalize.yml"
           aws cloudformation deploy \
-            --template-file infra/templates/rds.yml \
+            --template-file infra/templates/cognito-finalize.yml \
             --stack-name "$STACK" \
             --parameter-overrides "${parameters[@]}" \
             --capabilities CAPABILITY_NAMED_IAM \
@@ -387,6 +392,47 @@ jobs:
           echo "Deploying $STACK using infra/templates/ses.yml"
           aws cloudformation deploy \
             --template-file infra/templates/ses.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy rds when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['rds'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-rds"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/rds-status" 2> "$RUNNER_TEMP/rds-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/rds-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/rds-error"; then
+            cat "$RUNNER_TEMP/rds-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          if [[ -s "$ENV_DIR/rds.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/rds.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/rds-params.json"
+          else
+            jq -n --slurpfile global "$ENV_DIR/global.json" \
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/rds-params.json"
+          fi
+          
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/rds-params.json")
+          echo "Deploying $STACK using infra/templates/rds.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/rds.yml \
             --stack-name "$STACK" \
             --parameter-overrides "${parameters[@]}" \
             --capabilities CAPABILITY_NAMED_IAM \
@@ -461,6 +507,10 @@ jobs:
             cat "$RUNNER_TEMP/routing-error"
             exit 1
           fi
+          if ! aws cloudformation list-exports --region us-east-1 --query "Exports[?Name=='crimrhyth-$TARGET_ENV-ApiFunctionArn'].Name" --output text | grep -Fxq "crimrhyth-$TARGET_ENV-ApiFunctionArn"; then
+            echo "::notice::SKIP $STACK: Lambda export crimrhyth-$TARGET_ENV-ApiFunctionArn is missing. Deploy Lambda first."
+            exit 0
+          fi
           ENV_DIR="infra/overrides/$TARGET_ENV"
           jq -n --slurpfile global "$ENV_DIR/global.json" \
             '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/routing-params.json"
@@ -469,52 +519,6 @@ jobs:
           echo "Deploying $STACK using infra/templates/routing.yml"
           aws cloudformation deploy \
             --template-file infra/templates/routing.yml \
-            --stack-name "$STACK" \
-            --parameter-overrides "${parameters[@]}" \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --region us-east-1 \
-            --no-fail-on-empty-changeset
-
-      - name: Deploy cognito-finalize when changed or missing
-        shell: bash
-        env:
-          FILES_CHANGED: ${{ steps.filter.outputs['cognito-finalize'] }}
-          TARGET_ENV: ${{ matrix.environment }}
-        run: |
-          set -euo pipefail
-          STACK="crimrhyth-$TARGET_ENV-cognito-finalize"
-          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/cognito-finalize-status" 2> "$RUNNER_TEMP/cognito-finalize-error"; then
-            STATUS=$(cat "$RUNNER_TEMP/cognito-finalize-status")
-            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
-              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
-              exit 1
-            fi
-            if [[ "$FILES_CHANGED" != "true" ]]; then
-              echo "SKIP $STACK: already exists and no matching files changed."
-              exit 0
-            fi
-          elif ! grep -q 'does not exist' "$RUNNER_TEMP/cognito-finalize-error"; then
-            cat "$RUNNER_TEMP/cognito-finalize-error"
-            exit 1
-          fi
-          ENV_DIR="infra/overrides/$TARGET_ENV"
-          if [[ -s "$ENV_DIR/cognito-finalize.json" ]]; then
-            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/cognito-finalize.json" \
-              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
-          else
-            jq -n --slurpfile global "$ENV_DIR/global.json" \
-              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
-          fi
-          for key in "CallbackUrl" "LogoutUrl"; do
-            if ! jq -e --arg key "$key" 'any(.[]; .ParameterKey == $key and (.ParameterValue | length > 0))' "$RUNNER_TEMP/cognito-finalize-params.json" >/dev/null; then
-              echo "::notice::SKIP $STACK: required $key is not configured in the environment overrides."
-              exit 0
-            fi
-          done
-          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/cognito-finalize-params.json")
-          echo "Deploying $STACK using infra/templates/cognito-finalize.yml"
-          aws cloudformation deploy \
-            --template-file infra/templates/cognito-finalize.yml \
             --stack-name "$STACK" \
             --parameter-overrides "${parameters[@]}" \
             --capabilities CAPABILITY_NAMED_IAM \
