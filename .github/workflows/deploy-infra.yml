@@ -59,6 +59,9 @@ jobs:
               - 'infra/templates/lambda.yml'
               - 'infra/overrides/${{ matrix.environment }}/global.json'
               - 'infra/overrides/${{ matrix.environment }}/lambda.json'
+              - 'infra/templates/artifacts.yml'
+              - 'infra/templates/secrets-endpoint.yml'
+              - 'server/api/**'
             routing:
               - 'infra/templates/routing.yml'
               - 'infra/overrides/${{ matrix.environment }}/global.json'
@@ -439,11 +442,65 @@ jobs:
             --region us-east-1 \
             --no-fail-on-empty-changeset
 
+      - name: Ensure private Lambda artifact bucket
+        id: artifacts
+        shell: bash
+        env:
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          BUCKET="crimrhyth-$TARGET_ENV-$ACCOUNT_ID-artifacts"
+          STACK="crimrhyth-$TARGET_ENV-artifacts"
+          if ! aws cloudformation describe-stacks --stack-name "$STACK" --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/artifacts-status" 2> "$RUNNER_TEMP/artifacts-error"; then
+            if ! grep -q 'does not exist' "$RUNNER_TEMP/artifacts-error"; then cat "$RUNNER_TEMP/artifacts-error"; exit 1; fi
+            aws cloudformation deploy --template-file infra/templates/artifacts.yml --stack-name "$STACK" --parameter-overrides "env=$TARGET_ENV" --region us-east-1 --no-fail-on-empty-changeset
+          elif [[ "$(cat "$RUNNER_TEMP/artifacts-status")" != "CREATE_COMPLETE" && "$(cat "$RUNNER_TEMP/artifacts-status")" != "UPDATE_COMPLETE" ]]; then
+            echo "::error::$STACK is not ready"; exit 1
+          fi
+          echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure private Secrets Manager connectivity
+        shell: bash
+        env:
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-secrets-endpoint"
+          if ! aws cloudformation describe-stacks --stack-name "$STACK" --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/endpoint-status" 2> "$RUNNER_TEMP/endpoint-error"; then
+            if ! grep -q 'does not exist' "$RUNNER_TEMP/endpoint-error"; then cat "$RUNNER_TEMP/endpoint-error"; exit 1; fi
+            aws cloudformation deploy --template-file infra/templates/secrets-endpoint.yml --stack-name "$STACK" --parameter-overrides "env=$TARGET_ENV" --region us-east-1 --no-fail-on-empty-changeset
+          elif [[ "$(cat "$RUNNER_TEMP/endpoint-status")" != "CREATE_COMPLETE" && "$(cat "$RUNNER_TEMP/endpoint-status")" != "UPDATE_COMPLETE" ]]; then
+            echo "::error::$STACK is not ready"; exit 1
+          fi
+
+      - name: Package and upload Lambda API when changed or missing
+        id: api_artifact
+        shell: bash
+        env:
+          TARGET_ENV: ${{ matrix.environment }}
+          BUCKET: ${{ steps.artifacts.outputs.bucket }}
+          SOURCE_CHANGED: ${{ steps.filter.outputs.lambda }}
+        run: |
+          set -euo pipefail
+          KEY=$(aws s3api list-objects-v2 --bucket "$BUCKET" --prefix lambda/ --query 'sort_by(Contents || `[]`, &LastModified)[-1].Key' --output text)
+          if [[ "$SOURCE_CHANGED" == "true" || -z "$KEY" || "$KEY" == "None" ]]; then
+            KEY="lambda/api-${GITHUB_SHA}.zip"
+            npm install --prefix server/api --omit=dev --no-audit --no-fund
+            curl --fail --silent --show-error --location https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem --output server/api/rds-ca.pem
+            (cd server/api && zip -qr "$RUNNER_TEMP/crimson-api.zip" index.mjs rds-ca.pem node_modules)
+            aws s3 cp "$RUNNER_TEMP/crimson-api.zip" "s3://$BUCKET/$KEY" --only-show-errors
+          fi
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+          echo "Lambda artifact: s3://$BUCKET/$KEY"
+
       - name: Deploy lambda when changed or missing
         shell: bash
         env:
           FILES_CHANGED: ${{ steps.filter.outputs['lambda'] }}
           TARGET_ENV: ${{ matrix.environment }}
+          ARTIFACT_BUCKET: ${{ steps.artifacts.outputs.bucket }}
+          ARTIFACT_KEY: ${{ steps.api_artifact.outputs.key }}
         run: |
           set -euo pipefail
           STACK="crimrhyth-$TARGET_ENV-lambda"
@@ -469,6 +526,10 @@ jobs:
             jq -n --slurpfile global "$ENV_DIR/global.json" \
               '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/lambda-params.json"
           fi
+          jq --arg bucket "$ARTIFACT_BUCKET" --arg key "$ARTIFACT_KEY" \
+            '. + [{ParameterKey:"ArtifactBucket",ParameterValue:$bucket},{ParameterKey:"ArtifactKey",ParameterValue:$key}]' \
+            "$RUNNER_TEMP/lambda-params.json" > "$RUNNER_TEMP/lambda-params-final.json"
+          mv "$RUNNER_TEMP/lambda-params-final.json" "$RUNNER_TEMP/lambda-params.json"
           for key in "ArtifactBucket" "ArtifactKey"; do
             if ! jq -e --arg key "$key" 'any(.[]; .ParameterKey == $key and (.ParameterValue | length > 0))' "$RUNNER_TEMP/lambda-params.json" >/dev/null; then
               echo "::notice::SKIP $STACK: required $key is not configured in the environment overrides."

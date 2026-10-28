@@ -17,11 +17,26 @@ Resources:
   Stage:
     Type: AWS::ApiGatewayV2::Stage
     Properties: {ApiId: !Ref HttpApi, StageName: !Ref env, AutoDeploy: true}
+  CognitoAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource: ['$request.header.Authorization']
+      Name: !Sub 'crimrhyth-${env}-cognito-jwt'
+      JwtConfiguration:
+        Audience:
+          - !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolClientId'}
+        Issuer: !Sub
+          - 'https://cognito-idp.${AWS::Region}.amazonaws.com/${PoolId}'
+          - PoolId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
   Route:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: 'ANY /{proxy+}'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
       Target: !Sub 'integrations/${Integration}'
   Permission:
     Type: AWS::Lambda::Permission
