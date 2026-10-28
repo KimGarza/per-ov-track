@@ -2,7 +2,7 @@ name: Deploy to EAS
 
 on:
   push:
-    branches: [stage, prod]
+    branches: [dev, stage, prod]
 
 permissions:
   contents: read
