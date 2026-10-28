@@ -35,6 +35,20 @@ export async function handler(event) {
   const method = event.requestContext?.http?.method;
   const path = event.rawPath ?? '';
   if (method === 'GET' && path.endsWith('/health')) return json(200, { status: 'ok' });
+  // Internal database health check. API Gateway's catch-all route still requires Cognito JWT.
+  // GitHub Actions invokes this directly with IAM; no public unauthenticated DB route is created.
+  if (method === 'GET' && path === '/db-health') {
+    try {
+      const db = await pool();
+      const result = await db.query('SELECT 1 AS connected');
+      return json(result.rows[0]?.connected === 1 ? 200 : 503, {
+        status: result.rows[0]?.connected === 1 ? 'ok' : 'unavailable',
+      });
+    } catch (error) {
+      console.error('Private database health check failed', { name: error.name, code: error.code });
+      return json(503, { status: 'unavailable' });
+    }
+  }
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
   if (!userId) return json(401, { error: 'Authentication required' });
   if (!path.endsWith('/db-test') || !['GET', 'POST'].includes(method)) return json(404, { error: 'Not found' });
