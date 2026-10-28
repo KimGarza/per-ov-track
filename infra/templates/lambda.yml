@@ -44,6 +44,7 @@ Resources:
         Variables:
           APP_ENV: !Ref env
           DB_HOST: !ImportValue {Fn::Sub: 'crimrhyth-${env}-DatabaseEndpoint'}
+          DB_NAME: !Sub 'crimrhyth_${env}'
           DB_SECRET_ARN: !ImportValue {Fn::Sub: 'crimrhyth-${env}-DatabaseSecretArn'}
 Outputs:
   ApiArn:

@@ -7,7 +7,7 @@ Parameters:
 Resources:
   Identity:
     Type: AWS::SES::EmailIdentity
-    Properties: {EmailIdentity: !Ref SenderEmail}
+    Properties: {EmailIdentity: !Select [1, !Split ['@', !Ref SenderEmail]]}
   ConfigurationSet:
     Type: AWS::SES::ConfigurationSet
     Properties: {Name: !Sub 'crimrhyth-${env}-email'}

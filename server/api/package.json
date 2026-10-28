@@ -1,0 +1,10 @@
+{
+  "name": "crimson-rhythm-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.900.0",
+    "pg": "^8.16.3"
+  }
+}
