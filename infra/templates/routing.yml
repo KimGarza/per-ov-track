@@ -6,7 +6,19 @@ Parameters:
 Resources:
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
-    Properties: {Name: !Sub 'crimrhyth-${env}-api', ProtocolType: HTTP}
+    Properties:
+      Name: !Sub 'crimrhyth-${env}-api'
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - 'http://localhost:8081'
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
   Integration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
