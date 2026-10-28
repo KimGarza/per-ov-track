@@ -548,6 +548,38 @@ jobs:
             --region us-east-1 \
             --no-fail-on-empty-changeset
 
+      - name: Verify private PostgreSQL connection through Lambda
+        if: matrix.environment == 'dev'
+        shell: bash
+        run: |
+          set -euo pipefail
+          FUNCTION="crimrhyth-${{ matrix.environment }}-api-handler"
+          if ! aws lambda get-function --function-name "$FUNCTION" --region us-east-1 > /dev/null 2> "$RUNNER_TEMP/db-health-function-error"; then
+            if grep -q 'ResourceNotFoundException' "$RUNNER_TEMP/db-health-function-error"; then
+              echo "::notice::Database health check skipped: Lambda is not deployed yet."
+              exit 0
+            fi
+            cat "$RUNNER_TEMP/db-health-function-error"
+            exit 1
+          fi
+          aws lambda invoke \
+            --function-name "$FUNCTION" \
+            --region us-east-1 \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{"requestContext":{"http":{"method":"GET"}},"rawPath":"/db-health"}' \
+            "$RUNNER_TEMP/db-health-response.json" > "$RUNNER_TEMP/db-health-metadata.json"
+          if jq -e '.FunctionError != null' "$RUNNER_TEMP/db-health-metadata.json" > /dev/null; then
+            echo "::error::Lambda execution failed during database health check."
+            cat "$RUNNER_TEMP/db-health-response.json"
+            exit 1
+          fi
+          if ! jq -e '.statusCode == 200 and (.body | fromjson | .status == "ok")' "$RUNNER_TEMP/db-health-response.json" > /dev/null; then
+            echo "::error::PostgreSQL connectivity check failed. Check Lambda CloudWatch logs."
+            jq '{statusCode, body}' "$RUNNER_TEMP/db-health-response.json"
+            exit 1
+          fi
+          echo "SUCCESS: Lambda retrieved its database credentials and completed SELECT 1 on PostgreSQL."
+
       - name: Deploy routing when changed or missing
         shell: bash
         env:
