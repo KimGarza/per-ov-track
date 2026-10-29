@@ -3,6 +3,23 @@ name: Deploy to EAS
 on:
   push:
     branches: [dev, stage, prod]
+    paths:
+      - 'src/**'
+      - 'components/**'
+      - 'constants/**'
+      - 'hooks/**'
+      - 'utils/**'
+      - 'assets/**'
+      - 'data/**'
+      - 'app.json'
+      - 'eas.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'babel.config.*'
+      - 'metro.config.*'
+      - 'tsconfig.json'
+      - 'expo-env.d.ts'
+      - '.github/workflows/build-mobile.yml'
 
 permissions:
   contents: read
@@ -14,7 +31,7 @@ concurrency:
 jobs:
   build-and-submit:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 20
     strategy:
       matrix:
         # Change this lookup to map branches to GitHub environments.
@@ -46,6 +63,7 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      # Retain npm ci: EAS CLI may evaluate project config and Expo plugins on this runner.
       - name: Install app dependencies
         run: npm ci
 
@@ -61,9 +79,9 @@ jobs:
           fs.writeFileSync('eas.json', JSON.stringify(config, null, 2) + '\n');
           NODE
 
-      - name: Build and submit dev apps to Google Play Internal Testing and Apple TestFlight
+      - name: Queue dev builds and private testing submissions
         if: matrix.environment == 'dev'
-        run: npx eas-cli@latest build --platform all --profile "$EAS_PROFILE" --auto-submit-with-profile "$EAS_PROFILE" --non-interactive
+        run: npx eas-cli@latest build --platform all --profile "$EAS_PROFILE" --auto-submit-with-profile "$EAS_PROFILE" --non-interactive --no-wait
 
       - name: Queue stage or prod builds with automatic submission
         if: matrix.environment != 'dev'
