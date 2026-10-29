@@ -7,6 +7,15 @@
     "base": {
       "node": "22.23.3"
     },
+    "ios-simulator": {
+      "extends": "base",
+      "environment": "development",
+      "distribution": "internal",
+      "developmentClient": false,
+      "ios": {
+        "simulator": true
+      }
+    },
     "development-all": {
       "extends": "base",
       "environment": "development",
