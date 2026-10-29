@@ -38,7 +38,6 @@ jobs:
         environment: ${{ fromJSON('{"dev":["dev"],"stage":["stage"],"prod":["prod"]}')[github.ref_name] }}
     environment: ${{ matrix.environment }}
     env:
-      EXPO_DEBUG: "1"
       ENVIRONMENT: ${{ matrix.environment }}
       EAS_PROFILE: ${{ fromJSON('{"dev":"store-development","stage":"store-staging","prod":"production"}')[matrix.environment] }}
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -79,6 +78,11 @@ jobs:
           profile.ios = { ...profile.ios, ascAppId: appId };
           fs.writeFileSync('eas.json', JSON.stringify(config, null, 2) + '\n');
           NODE
+
+      - name: Enable debug logging on EAS development submission workers
+        if: matrix.environment == 'dev'
+        run: |
+          npx eas-cli@latest env:set --environment development --name EXPO_DEBUG --value 1 --visibility plaintext --non-interactive
 
       - name: Queue dev builds and private testing submissions
         if: matrix.environment == 'dev'
