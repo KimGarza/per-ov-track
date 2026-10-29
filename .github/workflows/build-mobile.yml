@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build-and-submit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 120
     strategy:
       matrix:
         # Change this lookup to map branches to GitHub environments.
@@ -61,6 +61,11 @@ jobs:
           fs.writeFileSync('eas.json', JSON.stringify(config, null, 2) + '\n');
           NODE
 
-      - name: Queue Android and iOS builds with automatic submission
-        # EAS handles build completion and submission; GitHub only waits for queueing.
+      - name: Build and submit dev apps to Google Play Internal Testing and Apple TestFlight
+        if: matrix.environment == 'dev'
+        run: npx eas-cli@latest build --platform all --profile "$EAS_PROFILE" --auto-submit-with-profile "$EAS_PROFILE" --non-interactive
+
+      - name: Queue stage or prod builds with automatic submission
+        if: matrix.environment != 'dev'
+        # Preserve existing stage/prod behavior.
         run: npx eas-cli@latest build --platform all --profile "$EAS_PROFILE" --auto-submit --non-interactive --no-wait
