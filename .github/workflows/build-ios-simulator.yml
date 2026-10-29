@@ -1,0 +1,50 @@
+name: Build iOS Simulator for Appetize
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-simulator-dev
+  cancel-in-progress: false
+
+jobs:
+  queue-ios-simulator:
+    name: Queue iOS simulator build (dev)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: dev
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check Expo authentication
+        run: |
+          test -n "$EXPO_TOKEN" || { echo "::error::Add EXPO_TOKEN to the dev GitHub environment secrets."; exit 1; }
+
+      - name: Checkout dev code
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+
+      - name: Connect to Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Queue iOS simulator build without waiting or submitting
+        run: npx eas-cli@latest build --platform ios --profile ios-simulator --non-interactive --no-wait
+
+      - name: Where to download
+        run: echo "When EAS finishes, open Expo > Builds > iOS simulator build and download the .tar.gz artifact for Appetize."
