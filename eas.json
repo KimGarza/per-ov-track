@@ -70,7 +70,7 @@
     "store-development": {
       "android": {
         "track": "internal",
-        "releaseStatus": "draft"
+        "releaseStatus": "completed"
       },
       "ios": {}
     },
