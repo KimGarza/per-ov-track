@@ -33,7 +33,7 @@ Resources:
         username: sub
   MobileClient:
     Type: AWS::Cognito::UserPoolClient
-    DependsOn: HostedDomain
+    DependsOn: [HostedDomain, GoogleProvider]
     Properties:
       ClientName: !Sub 'crimrhyth-${env}-mobile-client'
       UserPoolId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
