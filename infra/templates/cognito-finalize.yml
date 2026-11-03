@@ -5,9 +5,35 @@ Parameters:
     AllowedValues: [dev, stage, prod]
   CallbackUrl: {Type: String}
   LogoutUrl: {Type: String}
+  EnableGoogle:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+Conditions:
+  WithGoogle: !Equals [!Ref EnableGoogle, 'true']
 Resources:
+  HostedDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub 'crimrhyth-${env}-${AWS::AccountId}-login'
+      UserPoolId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
+  GoogleProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: WithGoogle
+    Properties:
+      ProviderName: Google
+      ProviderType: Google
+      UserPoolId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
+      ProviderDetails:
+        client_id: !Sub '{{resolve:secretsmanager:crimrhyth/${env}/google:SecretString:client_id}}'
+        client_secret: !Sub '{{resolve:secretsmanager:crimrhyth/${env}/google:SecretString:client_secret}}'
+        authorize_scopes: 'openid email profile'
+      AttributeMapping:
+        email: email
+        username: sub
   MobileClient:
     Type: AWS::Cognito::UserPoolClient
+    DependsOn: [HostedDomain, GoogleProvider]
     Properties:
       ClientName: !Sub 'crimrhyth-${env}-mobile-client'
       UserPoolId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
@@ -15,7 +41,10 @@ Resources:
       AllowedOAuthFlowsUserPoolClient: true
       AllowedOAuthFlows: [code]
       AllowedOAuthScopes: [openid, email, profile]
-      SupportedIdentityProviders: [COGNITO]
+      SupportedIdentityProviders: !If
+        - WithGoogle
+        - [COGNITO, Google]
+        - [COGNITO]
       CallbackURLs: [!Ref CallbackUrl]
       LogoutURLs: [!Ref LogoutUrl]
       PreventUserExistenceErrors: ENABLED
@@ -23,3 +52,6 @@ Outputs:
   ClientId:
     Value: !Ref MobileClient
     Export: {Name: !Sub 'crimrhyth-${env}-UserPoolClientId'}
+  CognitoDomain:
+    Value: !Sub 'crimrhyth-${env}-${AWS::AccountId}-login.auth.${AWS::Region}.amazoncognito.com'
+    Export: {Name: !Sub 'crimrhyth-${env}-CognitoDomain'}

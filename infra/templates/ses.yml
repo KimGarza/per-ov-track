@@ -12,6 +12,9 @@ Resources:
     Type: AWS::SES::ConfigurationSet
     Properties: {Name: !Sub 'crimrhyth-${env}-email'}
 Outputs:
+  Domain:
+    Value: !Select [1, !Split ['@', !Ref SenderEmail]]
+    Export: {Name: !Sub 'crimrhyth-${env}-SesDomain'}
   Sender:
     Value: !Ref SenderEmail
     Export: {Name: !Sub 'crimrhyth-${env}-SenderEmail'}
