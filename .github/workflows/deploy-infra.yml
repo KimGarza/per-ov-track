@@ -49,6 +49,7 @@ jobs:
             cognito-base:
               - 'infra/templates/cognito-base.yml'
               - 'infra/overrides/${{ matrix.environment }}/global.json'
+              - 'infra/overrides/${{ matrix.environment }}/cognito-base.json'
             rds:
               - 'infra/templates/rds.yml'
               - 'infra/overrides/${{ matrix.environment }}/global.json'
@@ -298,59 +299,23 @@ jobs:
             exit 1
           fi
           ENV_DIR="infra/overrides/$TARGET_ENV"
-          jq -n --slurpfile global "$ENV_DIR/global.json" \
-            '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-base-params.json"
+          jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/cognito-base.json" \
+            '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-base-params.json"
+          USE_SES=$(jq -r '.[] | select(.ParameterKey=="UseSesEmail") | .ParameterValue' "$RUNNER_TEMP/cognito-base-params.json")
+          if [[ "$USE_SES" == "true" ]]; then
+            SENDER=$(jq -r '.[] | select(.ParameterKey=="SenderEmail") | .ParameterValue' "$RUNNER_TEMP/cognito-base-params.json")
+            DOMAIN="${SENDER##*@}"
+            VERIFIED=$(aws sesv2 get-email-identity --email-identity "$DOMAIN" --region us-east-1 --query VerifiedForSendingStatus --output text)
+            if [[ "$VERIFIED" != "True" ]]; then
+              echo "::error::SES domain $DOMAIN is not verified. Add DKIM CNAMEs to Cloudflare before enabling Cognito SES email."
+              exit 1
+            fi
+          fi
           
           mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/cognito-base-params.json")
           echo "Deploying $STACK using infra/templates/cognito-base.yml"
           aws cloudformation deploy \
             --template-file infra/templates/cognito-base.yml \
-            --stack-name "$STACK" \
-            --parameter-overrides "${parameters[@]}" \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --region us-east-1 \
-            --no-fail-on-empty-changeset
-
-      - name: Deploy cognito-finalize when changed or missing
-        shell: bash
-        env:
-          FILES_CHANGED: ${{ steps.filter.outputs['cognito-finalize'] }}
-          TARGET_ENV: ${{ matrix.environment }}
-        run: |
-          set -euo pipefail
-          STACK="crimrhyth-$TARGET_ENV-cognito-finalize"
-          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/cognito-finalize-status" 2> "$RUNNER_TEMP/cognito-finalize-error"; then
-            STATUS=$(cat "$RUNNER_TEMP/cognito-finalize-status")
-            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
-              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
-              exit 1
-            fi
-            if [[ "$FILES_CHANGED" != "true" ]]; then
-              echo "SKIP $STACK: already exists and no matching files changed."
-              exit 0
-            fi
-          elif ! grep -q 'does not exist' "$RUNNER_TEMP/cognito-finalize-error"; then
-            cat "$RUNNER_TEMP/cognito-finalize-error"
-            exit 1
-          fi
-          ENV_DIR="infra/overrides/$TARGET_ENV"
-          if [[ -s "$ENV_DIR/cognito-finalize.json" ]]; then
-            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/cognito-finalize.json" \
-              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
-          else
-            jq -n --slurpfile global "$ENV_DIR/global.json" \
-              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
-          fi
-          for key in "CallbackUrl" "LogoutUrl"; do
-            if ! jq -e --arg key "$key" 'any(.[]; .ParameterKey == $key and (.ParameterValue | length > 0))' "$RUNNER_TEMP/cognito-finalize-params.json" >/dev/null; then
-              echo "::notice::SKIP $STACK: required $key is not configured in the environment overrides."
-              exit 0
-            fi
-          done
-          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/cognito-finalize-params.json")
-          echo "Deploying $STACK using infra/templates/cognito-finalize.yml"
-          aws cloudformation deploy \
-            --template-file infra/templates/cognito-finalize.yml \
             --stack-name "$STACK" \
             --parameter-overrides "${parameters[@]}" \
             --capabilities CAPABILITY_NAMED_IAM \
@@ -397,6 +362,74 @@ jobs:
           echo "Deploying $STACK using infra/templates/ses.yml"
           aws cloudformation deploy \
             --template-file infra/templates/ses.yml \
+            --stack-name "$STACK" \
+            --parameter-overrides "${parameters[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1 \
+            --no-fail-on-empty-changeset
+
+      - name: Explain SES DNS verification
+        if: matrix.environment == 'dev'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DOMAIN="crimsonrhythm.app"
+          echo "::group::SES domain verification ($DOMAIN)"
+          aws sesv2 get-email-identity --email-identity "$DOMAIN" --region us-east-1 \
+            --query '{Verified:VerifiedForSendingStatus,DKIMStatus:DkimAttributes.Status,DKIMTokens:DkimAttributes.Tokens}' \
+            --output json
+          echo "Cloudflare: create three CNAMEs: <token>._domainkey.$DOMAIN -> <token>.dkim.amazonses.com (DNS only)."
+          echo "::endgroup::"
+
+      - name: Deploy cognito-finalize when changed or missing
+        shell: bash
+        env:
+          FILES_CHANGED: ${{ steps.filter.outputs['cognito-finalize'] }}
+          TARGET_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          STACK="crimrhyth-$TARGET_ENV-cognito-finalize"
+          if aws cloudformation describe-stacks --stack-name "$STACK" --region us-east-1 --query 'Stacks[0].StackStatus' --output text > "$RUNNER_TEMP/cognito-finalize-status" 2> "$RUNNER_TEMP/cognito-finalize-error"; then
+            STATUS=$(cat "$RUNNER_TEMP/cognito-finalize-status")
+            if [[ "$STATUS" != "CREATE_COMPLETE" && "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "UPDATE_ROLLBACK_COMPLETE" ]]; then
+              echo "::error::$STACK is in status $STATUS; resolve it before deployment."
+              exit 1
+            fi
+            if [[ "$FILES_CHANGED" != "true" ]]; then
+              echo "SKIP $STACK: already exists and no matching files changed."
+              exit 0
+            fi
+          elif ! grep -q 'does not exist' "$RUNNER_TEMP/cognito-finalize-error"; then
+            cat "$RUNNER_TEMP/cognito-finalize-error"
+            exit 1
+          fi
+          ENV_DIR="infra/overrides/$TARGET_ENV"
+          if [[ -s "$ENV_DIR/cognito-finalize.json" ]]; then
+            jq -n --slurpfile global "$ENV_DIR/global.json" --slurpfile specific "$ENV_DIR/cognito-finalize.json" \
+              '($global[0].Parameters + $specific[0].Parameters) | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
+          else
+            jq -n --slurpfile global "$ENV_DIR/global.json" \
+              '$global[0].Parameters | to_entries | map({ParameterKey: .key, ParameterValue: (.value | tostring)})' > "$RUNNER_TEMP/cognito-finalize-params.json"
+          fi
+          for key in "CallbackUrl" "LogoutUrl"; do
+            if ! jq -e --arg key "$key" 'any(.[]; .ParameterKey == $key and (.ParameterValue | length > 0))' "$RUNNER_TEMP/cognito-finalize-params.json" >/dev/null; then
+              echo "::notice::SKIP $STACK: required $key is not configured in the environment overrides."
+              exit 0
+            fi
+          done
+          ENABLE_GOOGLE=$(jq -r '.[] | select(.ParameterKey=="EnableGoogle") | .ParameterValue' "$RUNNER_TEMP/cognito-finalize-params.json")
+          if [[ "$ENABLE_GOOGLE" == "true" ]]; then
+            SECRET=$(aws secretsmanager get-secret-value --secret-id "crimrhyth/$TARGET_ENV/google" --query SecretString --output text)
+            if ! jq -e '.client_id | strings | length > 0' <<< "$SECRET" >/dev/null || ! jq -e '.client_secret | strings | length > 0' <<< "$SECRET" >/dev/null; then
+              echo "::error::Google client_id/client_secret missing in AWS Secrets Manager for $TARGET_ENV"
+              exit 1
+            fi
+            echo "Google credentials present (values hidden)."
+          fi
+          mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/cognito-finalize-params.json")
+          echo "Deploying $STACK using infra/templates/cognito-finalize.yml"
+          aws cloudformation deploy \
+            --template-file infra/templates/cognito-finalize.yml \
             --stack-name "$STACK" \
             --parameter-overrides "${parameters[@]}" \
             --capabilities CAPABILITY_NAMED_IAM \
