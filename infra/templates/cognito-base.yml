@@ -3,6 +3,15 @@ Parameters:
   env:
     Type: String
     AllowedValues: [dev, stage, prod]
+  UseSesEmail:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  SenderEmail:
+    Type: String
+    Default: ''
+Conditions:
+  UseVerifiedSes: !Equals [!Ref UseSesEmail, 'true']
 Resources:
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -14,6 +23,15 @@ Resources:
         RecoveryMechanisms: [{Name: verified_email, Priority: 1}]
       Policies:
         PasswordPolicy: {MinimumLength: 12, RequireUppercase: true, RequireLowercase: true, RequireNumbers: true, RequireSymbols: true}
+      EmailConfiguration: !If
+        - UseVerifiedSes
+        - EmailSendingAccount: DEVELOPER
+          From: !Sub 'Crimson Rhythm <${SenderEmail}>'
+          ReplyToEmailAddress: !Ref SenderEmail
+          SourceArn: !Sub
+            - 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${Domain}'
+            - Domain: !Select [1, !Split ['@', !Ref SenderEmail]]
+        - EmailSendingAccount: COGNITO_DEFAULT
 Outputs:
   UserPoolId:
     Value: !Ref UserPool
