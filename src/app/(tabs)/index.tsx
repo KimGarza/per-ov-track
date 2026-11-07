@@ -10,6 +10,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { FaithBackdrop, ThemeFloralAccent } from '@/components/FaithBackdrop';
 import { DailyVerseReference, VerseIconButton, VersePopup } from '@/components/DailyVerse';
 import { CalendarGrid, CalendarLegend, MonthNavigation } from '@/components/CalendarGrid';
+import { CycleOnboardingModal } from '@/components/CycleOnboardingModal';
+import { predictedCalendar } from '@/utils/onboarding';
 import { CycleEditor } from '@/components/CycleEditor';
 import { DayEditor } from '@/components/DayEditor';
 import { useCycleData } from '@/components/CycleDataProvider';
@@ -30,7 +32,7 @@ export default function HomeScreen() {
       router.setParams({ panel: undefined });
     }
   }, [panel, openPanel]);
-  const { data, ready, error, retry } = useCycleData();
+  const { data, ready, error, retry, onboarding, saveOnboarding } = useCycleData();
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [viewport, setViewport] = useState({ width: window.width, height: window.height - insets.top - insets.bottom });
@@ -41,18 +43,7 @@ export default function HomeScreen() {
   const [selected, setSelected] = useState(today);
   const [journalOpen, setJournalOpen] = useState(false);
   const [verseOpen, setVerseOpen] = useState(false);
-  const [sampleDismissed, setSampleDismissed] = useState(false);
-  const showSample = !sampleDismissed && !Object.keys(data.days).length && !Object.keys(data.journal).length;
-  const sampleDays: Record<string, CycleKind> = {};
-  const samplePhases: Record<string, EstimatedPhase> = {};
-  if (showSample) {
-    for (let day = 9; day <= 31; day++) {
-      if (day >= 16 && day <= 20) continue;
-      samplePhases[dateKey(new Date(month.getFullYear(), month.getMonth(), day))] = day < 16 ? 'follicular' : 'luteal';
-    }
-    for (let day = 4; day <= 8; day++) sampleDays[dateKey(new Date(month.getFullYear(), month.getMonth(), day))] = 'menstrual';
-    for (let day = 16; day <= 20; day++) sampleDays[dateKey(new Date(month.getFullYear(), month.getMonth(), day))] = 'ovulation';
-  }
+  const predictions = useMemo(() => predictedCalendar(data, onboarding, today, month), [data, onboarding, today, month]);
   const [editor, setEditor] = useState<Editor>(null);
   const rows = Math.ceil((month.getDay() + new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()) / 7);
   const reserveCheckin = viewport.height >= 560 ? theme.calendar.checkinHeight : viewport.height >= 480 ? 72 : 0;
@@ -81,9 +72,8 @@ export default function HomeScreen() {
         <View style={[g.card, s.calendar]}>
           <ThemeFloralAccent />
           <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setEditor({ type: 'cycle', calendarFirst: true })} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
-          <CalendarGrid month={month} today={today} days={data.days} predictedDays={showSample ? sampleDays : {}} pendingDays={data.pendingDays} phaseDays={showSample ? samplePhases : undefined} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
+          <CalendarGrid month={month} today={today} days={data.days} predictedDays={predictions} pendingDays={data.pendingDays} phaseDays={Object.keys(data.days).length ? undefined : {}} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
           <CalendarLegend compact />
-          {showSample && <Pressable accessibilityRole="button" accessibilityLabel="Hide sample calendar" onPress={() => setSampleDismissed(true)}><Text style={{ color: theme.colors.muted, fontSize: 11, textAlign: 'center' }}>Sample colors only · Add your dates above · Hide</Text></Pressable>}
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><ThemeFloralAccent />
           <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
@@ -107,6 +97,7 @@ export default function HomeScreen() {
       </>}
     </ScrollView>
     </View>
+    <CycleOnboardingModal visible={ready && !onboarding.completed} onSave={saveOnboarding} />
     {journalOpen && <JournalBook onClose={() => setJournalOpen(false)} />}
     {verseOpen && <VersePopup day={today} onClose={() => setVerseOpen(false)} />}
     {editor?.type === 'cycle' && <CycleEditor initialDate={selected} today={today} calendarFirst={editor.calendarFirst} onClose={() => setEditor(null)} onJournal={day => openDay(day)} />}
