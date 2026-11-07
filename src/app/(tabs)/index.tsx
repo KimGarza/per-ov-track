@@ -19,7 +19,7 @@ import { useToday } from '@/components/useToday';
 import { createGlobalStyles, type Theme } from '@/constants/Theme';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { dailyVerse } from '@/utils/faith';
-import { cycleDay, dateKey, parseDate, type EstimatedPhase, type JournalEntry, type CycleKind } from '@/utils/cycle';
+import { cycleDay, dateKey, parseDate, type JournalEntry } from '@/utils/cycle';
 
 type Editor = { type: 'cycle'; calendarFirst: boolean } | { type: 'day'; day: string; field?: keyof JournalEntry } | null;
 export default function HomeScreen() {
