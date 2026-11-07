@@ -16,7 +16,7 @@ Google Web OAuth client must authorize Cognito's `https://<cognito-domain>/oauth
 
 ## Apple
 
-**Not yet configured in current Cognito CloudFormation.** The app's Apple button is prepared, but Apple federation must be added to Cognito and the mobile client's supported providers before it can succeed. Apple Services ID and key remain in AWS Secrets Manager; configure the same Cognito HTTPS callback in Apple Developer.
+**Not yet configured in current Cognito CloudFormation.** The Apple sign-in implementation is prepared but its button is hidden; Apple federation must be added to Cognito and the mobile client's supported providers before it can succeed. Apple Services ID and key remain in AWS Secrets Manager; configure the same Cognito HTTPS callback in Apple Developer.
 
 ## Email/password
 
@@ -28,4 +28,4 @@ Cognito's managed login handles signup, verification codes, password reset, and 
 
 ## Important build checks
 
-Install the SDK-compatible versions of `expo-auth-session` and `expo-secure-store` using `npx expo install expo-auth-session expo-secure-store`, commit the updated `package-lock.json`, then verify `npm ci`, `npx tsc --noEmit`, and the Android/iOS OAuth callback on device. A new native EAS build may be required because SecureStore is a native module. Do not merge until dependency lockfile is synchronized.
+The current dev branch already has Expo SDK 57-compatible `expo-auth-session` and `expo-secure-store` in package.json and its lockfile, following the user's local install. This PR does not change dependencies. Verify `npm ci`, `npm run lint`, `npx tsc --noEmit`, and `npm test` before merging. A new EAS build is needed to test native authentication. The Apple sign-in button is intentionally hidden until Cognito Apple federation is deployed and `EXPO_PUBLIC_APPLE_LOGIN_ENABLED=true` is configured.
