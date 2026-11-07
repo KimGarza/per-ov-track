@@ -17,8 +17,8 @@ export default function WelcomeScreen() {
     try { await signIn(provider, mode); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to sign in'); }
     finally { setBusy(false); }
   }
-  const button = (label: string, action: () => void, emphasized = false, provider?: 'Google' | 'Apple') =>
-    <Pressable disabled={busy} accessibilityRole="button" onPress={action} style={{ padding: 16, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: emphasized ? theme.colors.rose : theme.colors.surface }}>
+  const button = (label: string, action: () => void, emphasized = false, provider?: 'Google' | 'Apple', disabled = false) =>
+    <Pressable disabled={busy || disabled} accessibilityRole="button" onPress={action} style={{ padding: 16, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, opacity: disabled ? 0.55 : 1, backgroundColor: emphasized ? theme.colors.rose : theme.colors.surface }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
         {provider === 'Google' && <Text accessibilityLabel="Google icon" style={{ fontSize: 21, fontWeight: '800', color: '#4285F4' }}>G</Text>}
         {provider === 'Apple' && <Text accessibilityLabel="Apple icon" style={{ fontSize: 23, fontWeight: '700', color: theme.colors.text }}></Text>}
@@ -31,7 +31,7 @@ export default function WelcomeScreen() {
     {button('Get Started — Create Account', () => void begin(undefined, 'signup'), true)}
     {button('Sign In with Email', () => void begin())}
     {button('Continue with Google', () => void begin('Google'), false, 'Google')}
-    {button('Continue with Apple', () => void begin('SignInWithApple'), false, 'Apple')}
+    {button(process.env.EXPO_PUBLIC_APPLE_LOGIN_ENABLED === 'true' ? 'Continue with Apple' : 'Apple Sign-In (setup pending)', () => void begin('SignInWithApple'), false, 'Apple', process.env.EXPO_PUBLIC_APPLE_LOGIN_ENABLED !== 'true')}
     {busy && <ActivityIndicator />}
     {!!error && <Text accessibilityRole="alert" style={{ color: '#a22', textAlign: 'center' }}>{error}</Text>}
   </ScrollView>;
