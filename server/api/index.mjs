@@ -51,6 +51,73 @@ export async function handler(event) {
   }
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
   if (!userId) return json(401, { error: 'Authentication required' });
+  if (method === 'POST' && path.endsWith('/users/me/sync')) {
+    try {
+      const claims = event.requestContext.authorizer.jwt.claims;
+      const db = await pool();
+      // Bootstrap schema for dev. Replace with versioned migrations before production.
+      await db.query(`CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY,
+        cognito_sub TEXT UNIQUE NOT NULL,
+        email TEXT,
+        first_name TEXT,
+        last_name TEXT,
+        display_name TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`);
+      const { rows } = await db.query(
+        `INSERT INTO users (id, cognito_sub, email, first_name, last_name, display_name)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (cognito_sub) DO UPDATE SET
+           last_login_at = NOW(), updated_at = NOW(),
+           email = COALESCE(EXCLUDED.email, users.email),
+           first_name = COALESCE(EXCLUDED.first_name, users.first_name),
+           last_name = COALESCE(EXCLUDED.last_name, users.last_name),
+           display_name = COALESCE(EXCLUDED.display_name, users.display_name)
+         RETURNING id, display_name, created_at`,
+        [randomUUID(), userId, claims.email ?? null, claims.given_name ?? null, claims.family_name ?? null, claims.name ?? null],
+      );
+      return json(200, { user: rows[0] });
+    } catch (error) {
+      console.error('User sync failed', { name: error.name, code: error.code });
+      return json(503, { error: 'Account sync temporarily unavailable' });
+    }
+  }
+  if (method === 'GET' && path.endsWith('/users/me')) {
+    try {
+      const db = await pool();
+      const { rows } = await db.query(
+        'SELECT id, email, first_name, last_name, display_name, created_at FROM users WHERE cognito_sub = $1',
+        [userId],
+      );
+      return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
+    } catch (error) {
+      console.error('Account fetch failed', { name: error.name, code: error.code });
+      return json(503, { error: 'Account unavailable' });
+    }
+  }
+  if (method === 'PATCH' && path.endsWith('/users/me')) {
+    try {
+      const input = JSON.parse(event.body || '{}');
+      const firstName = typeof input.first_name === 'string' ? input.first_name.trim().slice(0, 80) : '';
+      const lastName = typeof input.last_name === 'string' ? input.last_name.trim().slice(0, 80) : '';
+      if (!firstName) return json(400, { error: 'First name is required' });
+      const db = await pool();
+      const { rows } = await db.query(
+        `UPDATE users SET first_name = $1, last_name = $2,
+          display_name = TRIM(CONCAT($1, ' ', $2)), updated_at = NOW()
+          WHERE cognito_sub = $3 RETURNING id, first_name, last_name, display_name`,
+        [firstName, lastName, userId],
+      );
+      if (!rows.length) return json(404, { error: 'Account not initialized' });
+      return json(200, { user: rows[0] });
+    } catch (error) {
+      console.error('Account update failed', { name: error.name, code: error.code });
+      return json(503, { error: 'Account update unavailable' });
+    }
+  }
   if (!path.endsWith('/db-test') || !['GET', 'POST'].includes(method)) return json(404, { error: 'Not found' });
   try {
     const db = await pool();
