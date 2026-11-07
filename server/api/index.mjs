@@ -85,6 +85,19 @@ export async function handler(event) {
       return json(503, { error: 'Account sync temporarily unavailable' });
     }
   }
+  if (method === 'GET' && path.endsWith('/users/me')) {
+    try {
+      const db = await pool();
+      const { rows } = await db.query(
+        'SELECT id, email, first_name, last_name, display_name, created_at FROM users WHERE cognito_sub = $1',
+        [userId],
+      );
+      return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
+    } catch (error) {
+      console.error('Account fetch failed', { name: error.name, code: error.code });
+      return json(503, { error: 'Account unavailable' });
+    }
+  }
   if (method === 'PATCH' && path.endsWith('/users/me')) {
     try {
       const input = JSON.parse(event.body || '{}');
