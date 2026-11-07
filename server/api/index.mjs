@@ -85,6 +85,26 @@ export async function handler(event) {
       return json(503, { error: 'Account sync temporarily unavailable' });
     }
   }
+  if (method === 'PATCH' && path.endsWith('/users/me')) {
+    try {
+      const input = JSON.parse(event.body || '{}');
+      const firstName = typeof input.first_name === 'string' ? input.first_name.trim().slice(0, 80) : '';
+      const lastName = typeof input.last_name === 'string' ? input.last_name.trim().slice(0, 80) : '';
+      if (!firstName) return json(400, { error: 'First name is required' });
+      const db = await pool();
+      const { rows } = await db.query(
+        `UPDATE users SET first_name = $1, last_name = $2,
+          display_name = TRIM(CONCAT($1, ' ', $2)), updated_at = NOW()
+          WHERE cognito_sub = $3 RETURNING id, first_name, last_name, display_name`,
+        [firstName, lastName, userId],
+      );
+      if (!rows.length) return json(404, { error: 'Account not initialized' });
+      return json(200, { user: rows[0] });
+    } catch (error) {
+      console.error('Account update failed', { name: error.name, code: error.code });
+      return json(503, { error: 'Account update unavailable' });
+    }
+  }
   if (!path.endsWith('/db-test') || !['GET', 'POST'].includes(method)) return json(404, { error: 'Not found' });
   try {
     const db = await pool();
