@@ -33,7 +33,7 @@ export function CycleOnboardingModal({ visible, onSave }: { visible: boolean; on
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => void finish()}>
     <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#0009', padding: 18 }}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ backgroundColor: c.background, borderRadius: 20, padding: 22, gap: 12 }}>
-        <Text style={{ color: c.text, fontSize: 25, fontWeight: '700' }}>Let's get to know your cycle</Text>
+        <Text style={{ color: c.text, fontSize: 25, fontWeight: '700' }}>Let’s get to know your cycle</Text>
         <Text style={{ color: c.text }}>Everything here is optional. You can start tracking without knowing any dates.</Text>
         <Text style={{ color: c.text, fontWeight: '600' }}>When did your last period start?</Text>
         <TextInput accessibilityLabel="Last period start date" placeholder="YYYY-MM-DD" placeholderTextColor={c.muted} editable={!unknown} value={period} onChangeText={setPeriod} style={{ borderColor: c.border, borderWidth: 1, borderRadius: 10, padding: 12, color: c.text }} />
