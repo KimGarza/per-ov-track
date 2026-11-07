@@ -59,8 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Account sync is handled by the authenticated API; never send an unverified client-supplied user ID.
     try {
       const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
-      if (base) await fetch(`${base}/users/me/sync`, { method: 'POST', headers: { Authorization: `Bearer ${next.accessToken}` } });
-    } catch { /* Sign-in remains valid even if profile sync is temporarily unavailable. */ }
+      if (base) {
+        const response = await fetch(`${base}/users/me/sync`, { method: 'POST', headers: { Authorization: `Bearer ${next.idToken}` } });
+        if (!response.ok) console.warn('Account sync failed', response.status);
+      }
+    } catch { console.warn('Account sync unavailable'); }
   }, []);
 
   const signOut = useCallback(async () => {
