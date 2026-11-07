@@ -31,9 +31,24 @@ Resources:
       AttributeMapping:
         email: email
         username: sub
+  AppleProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      ProviderName: SignInWithApple
+      ProviderType: SignInWithApple
+      UserPoolId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
+      ProviderDetails:
+        client_id: !Sub '{{resolve:secretsmanager:crimrhyth/${env}/apple:SecretString:client_id}}'
+        team_id: !Sub '{{resolve:secretsmanager:crimrhyth/${env}/apple:SecretString:team_id}}'
+        key_id: !Sub '{{resolve:secretsmanager:crimrhyth/${env}/apple:SecretString:key_id}}'
+        private_key: !Sub '{{resolve:secretsmanager:crimrhyth/${env}/apple:SecretString:private_key}}'
+        authorize_scopes: 'email name'
+      AttributeMapping:
+        email: email
+        username: sub
   MobileClient:
     Type: AWS::Cognito::UserPoolClient
-    DependsOn: [HostedDomain, GoogleProvider]
+    DependsOn: [HostedDomain, GoogleProvider, AppleProvider]
     Properties:
       ClientName: !Sub 'crimrhyth-${env}-mobile-client'
       UserPoolId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
@@ -43,8 +58,8 @@ Resources:
       AllowedOAuthScopes: [openid, email, profile]
       SupportedIdentityProviders: !If
         - WithGoogle
-        - [COGNITO, Google]
-        - [COGNITO]
+        - [COGNITO, Google, SignInWithApple]
+        - [COGNITO, SignInWithApple]
       CallbackURLs: [!Ref CallbackUrl]
       LogoutURLs: [!Ref LogoutUrl]
       PreventUserExistenceErrors: ENABLED

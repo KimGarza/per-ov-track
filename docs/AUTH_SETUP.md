@@ -16,7 +16,7 @@ Google Web OAuth client must authorize Cognito's `https://<cognito-domain>/oauth
 
 ## Apple
 
-**Not yet configured in current Cognito CloudFormation.** The Apple sign-in implementation is prepared but its button is hidden; Apple federation must be added to Cognito and the mobile client's supported providers before it can succeed. Apple Services ID and key remain in AWS Secrets Manager; configure the same Cognito HTTPS callback in Apple Developer.
+CloudFormation configures Apple federation directly, without a feature toggle. The existing `crimrhyth/<env>/apple` Secrets Manager shell contains four manually populated JSON fields: `client_id` (Apple Services ID), `team_id`, `key_id`, `private_key` (full .p8 contents with newlines escaped in JSON). The deployment workflow validates all four fields before enabling Apple; it never logs them. Register `https://<cognito-domain>/oauth2/idpresponse` as the return URL for that Services ID in Apple Developer. The Apple button is always visible and clickable. Fill in Apple credentials before deploying the Cognito finalize stack, or deployment will fail; stage and prod need their own populated Apple credentials when their Cognito finalize stacks are deployed. No Apple Expo feature flag is needed.
 
 ## Email/password
 
@@ -28,4 +28,4 @@ Cognito's managed login handles signup, verification codes, password reset, and 
 
 ## Important build checks
 
-The current dev branch already has Expo SDK 57-compatible `expo-auth-session` and `expo-secure-store` in package.json and its lockfile, following the user's local install. This PR does not change dependencies. Verify `npm ci`, `npm run lint`, `npx tsc --noEmit`, and `npm test` before merging. A new EAS build is needed to test native authentication. The Apple sign-in button is intentionally hidden until Cognito Apple federation is deployed and `EXPO_PUBLIC_APPLE_LOGIN_ENABLED=true` is configured.
+The current dev branch already has Expo SDK 57-compatible `expo-auth-session` and `expo-secure-store` in package.json and its lockfile, following the user's local install. This PR does not change dependencies. Verify `npm ci`, `npm run lint`, `npx tsc --noEmit`, and `npm test` before merging. A new EAS build is needed to test native authentication. The Apple sign-in button is always present. Cognito Apple federation must be deployed with valid credentials for the button to work.
