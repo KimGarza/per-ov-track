@@ -36,11 +36,11 @@ function useCycleState() {
       setData(next);
       if (session && api) {
         const keys = new Set([...Object.keys(next.days), ...Object.keys(next.journal), ...Object.keys(next.diary ?? {}), ...Object.keys(next.reflections ?? {})]);
-        for (const day of keys) {
+        try { for (const day of keys) {
           const payload = { date: day, kind: next.days[day] ?? null, confirmed: !next.pendingDays?.[day], flow: next.observations?.[day]?.kind === 'menstrual' ? next.observations[day].flow : undefined, mucus: next.observations?.[day]?.kind === 'ovulation' ? next.observations[day].mucus : undefined, ...next.journal[day], diary: next.diary?.[day], diaryStyle: next.diaryStyles?.[day], reflection: next.reflections?.[day] };
           const response = await fetch(`${api}/cycle/days`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(payload) });
           if (!response.ok) { console.warn('Cycle cloud sync unavailable', response.status); break; }
-        }
+        } } catch { console.warn('Cycle cloud sync unavailable'); }
       }
     });
     queue.current = operation.catch(() => {});
