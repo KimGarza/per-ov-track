@@ -118,6 +118,67 @@ export async function handler(event) {
       return json(503, { error: 'Account update unavailable' });
     }
   }
+  if (path.endsWith('/cycle/profile') && ['GET', 'PUT'].includes(method)) {
+    try {
+      const db = await pool();
+      if (method === 'GET') {
+        const { rows } = await db.query(
+          'SELECT onboarding_completed_at, last_period_start, last_ovulation_date, pregnancy_intent, cycle_length_days, period_length_days FROM cycle_profiles WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1)',
+          [userId],
+        );
+        return json(200, { profile: rows[0] ?? null });
+      }
+      const input = JSON.parse(event.body || '{}');
+      const allowed = ['trying', 'struggling', 'no', 'pregnant', 'unsure'];
+      const validDate = value => value == null || (typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && value <= new Date().toISOString().slice(0, 10));
+      if (!validDate(input.lastPeriodStart) || !validDate(input.lastOvulation) || (input.pregnancyIntent != null && !allowed.includes(input.pregnancyIntent))) return json(400, { error: 'Invalid cycle profile' });
+      const length = input.cycleLength ?? 28, periodLength = input.periodLength ?? 5;
+      if (!Number.isInteger(length) || length < 21 || length > 45 || !Number.isInteger(periodLength) || periodLength < 1 || periodLength > 10) return json(400, { error: 'Invalid cycle lengths' });
+      const { rows } = await db.query(
+        `INSERT INTO cycle_profiles (user_id, onboarding_completed_at, last_period_start, last_ovulation_date, pregnancy_intent, cycle_length_days, period_length_days)
+         SELECT id, NOW(), $2::date, $3::date, $4, $5, $6 FROM users WHERE cognito_sub = $1
+         ON CONFLICT (user_id) DO UPDATE SET onboarding_completed_at = NOW(), last_period_start = EXCLUDED.last_period_start,
+           last_ovulation_date = EXCLUDED.last_ovulation_date, pregnancy_intent = EXCLUDED.pregnancy_intent,
+           cycle_length_days = EXCLUDED.cycle_length_days, period_length_days = EXCLUDED.period_length_days, updated_at = NOW()
+         RETURNING user_id`,
+        [userId, input.lastPeriodStart ?? null, input.lastOvulation ?? null, input.pregnancyIntent ?? null, length, periodLength],
+      );
+      return rows.length ? json(200, { saved: true }) : json(404, { error: 'Account not initialized' });
+    } catch (error) {
+      console.error('Cycle profile request failed', { name: error.name, code: error.code });
+      return json(503, { error: 'Cycle profile unavailable' });
+    }
+  }
+  if (path.endsWith('/cycle/days') && ['GET', 'PUT'].includes(method)) {
+    try {
+      const db = await pool();
+      if (method === 'GET') {
+        const { rows } = await db.query(
+          'SELECT entry_date, kind, confirmed, flow, cervical_mucus, mood, symptoms, notes, diary, diary_style, reflection FROM cycle_day_entries WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1) ORDER BY entry_date DESC LIMIT 1000',
+          [userId],
+        );
+        return json(200, { entries: rows });
+      }
+      const input = JSON.parse(event.body || '{}');
+      if (typeof input.date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(input.date) || Number.isNaN(Date.parse(input.date)) || ![null, 'menstrual', 'ovulation'].includes(input.kind ?? null)) return json(400, { error: 'Invalid day entry' });
+      const string = (value, max = 5000) => typeof value === 'string' ? value.slice(0, max) : null;
+      const flow = input.flow ?? null, mucus = input.mucus ?? null;
+      if (flow && !['spotting','light','normal','heavy'].includes(flow) || mucus && !['dry','sticky','creamy','watery','stretchy'].includes(mucus)) return json(400, { error: 'Invalid observation' });
+      const { rows } = await db.query(
+        `INSERT INTO cycle_day_entries (id, user_id, entry_date, kind, confirmed, flow, cervical_mucus, mood, symptoms, notes, diary, diary_style, reflection)
+         SELECT $2, id, $3::date, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb FROM users WHERE cognito_sub = $1
+         ON CONFLICT (user_id, entry_date) DO UPDATE SET kind=EXCLUDED.kind, confirmed=EXCLUDED.confirmed, flow=EXCLUDED.flow,
+         cervical_mucus=EXCLUDED.cervical_mucus, mood=EXCLUDED.mood, symptoms=EXCLUDED.symptoms, notes=EXCLUDED.notes,
+         diary=EXCLUDED.diary, diary_style=EXCLUDED.diary_style, reflection=EXCLUDED.reflection, updated_at=NOW()
+         RETURNING id`,
+        [userId, randomUUID(), input.date, input.kind ?? null, input.confirmed !== false, flow, mucus, string(input.mood, 200), string(input.symptoms), string(input.notes), string(input.diary, 20000), input.diaryStyle ? JSON.stringify(input.diaryStyle) : null, input.reflection ? JSON.stringify(input.reflection) : null],
+      );
+      return rows.length ? json(200, { saved: true }) : json(404, { error: 'Account not initialized' });
+    } catch (error) {
+      console.error('Cycle day request failed', { name: error.name, code: error.code });
+      return json(503, { error: 'Cycle day unavailable' });
+    }
+  }
   if (!path.endsWith('/db-test') || !['GET', 'POST'].includes(method)) return json(404, { error: 'Not found' });
   try {
     const db = await pool();
