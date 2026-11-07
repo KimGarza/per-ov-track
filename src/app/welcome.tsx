@@ -27,7 +27,7 @@ export default function WelcomeScreen() {
     {button('Get Started — Create Account', () => void begin(undefined, 'signup'), true)}
     {button('Sign In with Email', () => void begin())}
     {button('Continue with Google', () => void begin('Google'))}
-    {button('Continue with Apple', () => void begin('SignInWithApple'))}
+    {process.env.EXPO_PUBLIC_APPLE_LOGIN_ENABLED === 'true' ? button('Continue with Apple', () => void begin('SignInWithApple')) : null}
     {busy && <ActivityIndicator />}
     {!!error && <Text accessibilityRole="alert" style={{ color: '#a22', textAlign: 'center' }}>{error}</Text>}
   </ScrollView>;
