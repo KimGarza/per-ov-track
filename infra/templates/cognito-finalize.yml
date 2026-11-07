@@ -5,17 +5,12 @@ Parameters:
     AllowedValues: [dev, stage, prod]
   CallbackUrl: {Type: String}
   LogoutUrl: {Type: String}
-  EnableApple:
-    Type: String
-    Default: 'false'
-    AllowedValues: ['true', 'false']
   EnableGoogle:
     Type: String
     Default: 'false'
     AllowedValues: ['true', 'false']
 Conditions:
   WithGoogle: !Equals [!Ref EnableGoogle, 'true']
-  WithApple: !Equals [!Ref EnableApple, 'true']
 Resources:
   HostedDomain:
     Type: AWS::Cognito::UserPoolDomain
@@ -38,7 +33,6 @@ Resources:
         username: sub
   AppleProvider:
     Type: AWS::Cognito::UserPoolIdentityProvider
-    Condition: WithApple
     Properties:
       ProviderName: SignInWithApple
       ProviderType: SignInWithApple
@@ -64,14 +58,8 @@ Resources:
       AllowedOAuthScopes: [openid, email, profile]
       SupportedIdentityProviders: !If
         - WithGoogle
-        - !If
-          - WithApple
-          - [COGNITO, Google, SignInWithApple]
-          - [COGNITO, Google]
-        - !If
-          - WithApple
-          - [COGNITO, SignInWithApple]
-          - [COGNITO]
+        - [COGNITO, Google, SignInWithApple]
+        - [COGNITO, SignInWithApple]
       CallbackURLs: [!Ref CallbackUrl]
       LogoutURLs: [!Ref LogoutUrl]
       PreventUserExistenceErrors: ENABLED
