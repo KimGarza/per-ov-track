@@ -9,7 +9,7 @@ const onboardingKey = 'crimson-rhythm:cycle-onboarding:v1';
 const storageKey = 'crimson-rhythm:cycle-data:v1';
 function useCycleState() {
   const { session } = useAuth();
-  const api = process.env.EXPO_PUBLIC_API_URL?.replace(/\\/$/, '');
+  const api = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
   const [data, setData] = useState<CycleData>(emptyCycleData);
   const [onboarding, setOnboarding] = useState<CycleOnboarding>(defaultOnboarding);
   const current = useRef(data);
