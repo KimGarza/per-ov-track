@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -10,7 +10,8 @@ export default function WelcomeScreen() {
   const { theme } = useAppTheme();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  if (session) { router.replace('/(tabs)'); return null; }
+  useEffect(() => { if (session) router.replace('/(tabs)'); }, [session, router]);
+  if (session) return null;
   async function begin(provider?: 'Google' | 'SignInWithApple', mode: 'login' | 'signup' = 'login') {
     setError(''); setBusy(true);
     try { await signIn(provider, mode); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to sign in'); }
