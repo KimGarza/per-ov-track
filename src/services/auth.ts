@@ -28,11 +28,11 @@ export function decodeProfile(idToken: string): Profile {
   } catch { return { sub: '' }; }
 }
 
-export function toSession(token: AuthSession.TokenResponse, previousRefresh?: string): Session {
-  if (!token.accessToken || !token.idToken) throw new Error('Cognito did not return the expected tokens.');
+export function toSession(token: AuthSession.TokenResponse, previous?: Session): Session {
+  if (!token.accessToken || !(token.idToken ?? previous?.idToken)) throw new Error('Cognito did not return the expected tokens.');
   return {
-    accessToken: token.accessToken, idToken: token.idToken,
-    refreshToken: token.refreshToken ?? previousRefresh,
+    accessToken: token.accessToken, idToken: token.idToken ?? previous!.idToken,
+    refreshToken: token.refreshToken ?? previous?.refreshToken,
     expiresAt: Math.floor(Date.now() / 1000) + (token.expiresIn ?? 3600),
   };
 }
@@ -59,7 +59,7 @@ export async function refreshSession(session: Session): Promise<Session | null> 
   try {
     const { clientId, discovery } = authConfig();
     const refreshed = await AuthSession.refreshAsync({ clientId, refreshToken: session.refreshToken }, discovery);
-    const next = toSession(refreshed, session.refreshToken);
+    const next = toSession(refreshed, session);
     await saveSession(next);
     return next;
   } catch { await saveSession(null); return null; }
