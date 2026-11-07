@@ -2,6 +2,7 @@
   "Parameters": {
     "CallbackUrl": "crimsonrhythm://auth/callback",
     "LogoutUrl": "crimsonrhythm://",
-    "EnableGoogle": "true"
+    "EnableGoogle": "true",
+    "EnableApple": "false"
   }
 }
