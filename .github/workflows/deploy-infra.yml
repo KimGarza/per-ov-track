@@ -426,6 +426,17 @@ jobs:
             fi
             echo "Google credentials present (values hidden)."
           fi
+          ENABLE_APPLE=$(jq -r '.[] | select(.ParameterKey=="EnableApple") | .ParameterValue' "$RUNNER_TEMP/cognito-finalize-params.json")
+          if [[ "$ENABLE_APPLE" == "true" ]]; then
+            APPLE_SECRET=$(aws secretsmanager get-secret-value --secret-id "crimrhyth/$TARGET_ENV/apple" --query SecretString --output text)
+            for key in client_id team_id key_id private_key; do
+              if ! jq -e --arg key "$key" '.[$key] | strings | length > 0' <<< "$APPLE_SECRET" >/dev/null; then
+                echo "::error::Apple $key missing in AWS Secrets Manager for $TARGET_ENV"
+                exit 1
+              fi
+            done
+            echo "Apple credentials present (values hidden)."
+          fi
           mapfile -t parameters < <(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "$RUNNER_TEMP/cognito-finalize-params.json")
           echo "Deploying $STACK using infra/templates/cognito-finalize.yml"
           aws cloudformation deploy \
