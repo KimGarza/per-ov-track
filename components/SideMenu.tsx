@@ -7,6 +7,8 @@ import { themeOptions } from '@/constants/Theme';
 import { EditSheet } from './EditSheet';
 import { PrimaryPanels, panelTitles, type PrimaryPanel } from './PrimaryPanels';
 import { useAppTheme } from './ThemeProvider';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { router } from 'expo-router';
 
 const MenuContext = createContext<{ openMenu: () => void; openPanel: (panel: PrimaryPanel) => void; setExternalOverlay: (active: boolean) => void }>({ openMenu: () => {}, openPanel: () => {}, setExternalOverlay: () => {} });
 export const useCalendarOverlay = () => useContext(MenuContext).setExternalOverlay;
@@ -22,6 +24,7 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
   const [slide] = useState(() => new Animated.Value(-320));
   useEffect(() => { if (open) { slide.setValue(-320); Animated.timing(slide, { toValue: 0, duration: 220, useNativeDriver: true }).start(); } }, [open, slide]);
   const { theme, styles: g, setName, name } = useAppTheme();
+  const { profile } = useAuth();
   const [themeAnchor, setThemeAnchor] = useState<AnchorRect | null>(null);
   const [panel, setPanel] = useState<PrimaryPanel | null>(null);
   const openPanel = useCallback((value: PrimaryPanel) => { setOpen(false); setPanel(value); }, []);
@@ -42,6 +45,9 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
           <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={[g.heading, { fontSize: 30 }]}>✝ Crimson Rhythm</Text><Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={() => setOpen(false)} style={g.outlineButton}><Text style={{ color: theme.colors.text }}>×</Text></Pressable></View>
             <Text style={[g.body, { fontStyle: 'italic' }]}>Grace for every season.</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="My Account" onPress={() => { setOpen(false); router.push('/account'); }} style={[g.outlineButton, { alignItems: 'flex-start', paddingHorizontal: theme.spacing.md }]}>
+              <Text style={{ color: theme.colors.text, fontSize: 16 }}>◉   My Account{profile?.given_name ? ` · ${profile.given_name}` : profile?.name ? ` · ${profile.name}` : ''}</Text>
+            </Pressable>
             {items.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.label} onPress={event => { if (item.id === 'themes') event.currentTarget.measureInWindow((x, y, width, height) => setThemeAnchor({ x, y, width, height })); else openPanel(item.id); }} style={[g.outlineButton, { alignItems: 'flex-start', paddingHorizontal: theme.spacing.md }]}><Text style={{ color: theme.colors.text, fontSize: 16 }}>{item.icon}   {item.label}</Text></Pressable>)}
           </ScrollView>
         </SafeAreaView></Animated.View>
