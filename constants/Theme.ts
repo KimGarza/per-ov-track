@@ -4,6 +4,7 @@ import { Platform, StyleSheet } from 'react-native';
 export const designTokens = {
   fonts: { mono: 'SpaceMono', heading: 'CormorantGaramond', body: Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }) },
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
+  auth: { maxWidth: 430, buttonHeight: 54, buttonRadius: 14, buttonGap: 12 },
   radius: { xs: 4, sm: 12, calendarDay: 10, card: 26, pill: 100 },
   typography: { label: 14, caption: 12, sectionHeading: 25 },
   opacity: { disabled: 0.45, predictionBlend: 0.48 },
@@ -91,4 +92,8 @@ export const createGlobalStyles = (theme: Theme) => StyleSheet.create({
   input: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.sm, padding: theme.spacing.md, minHeight: theme.layout.touchTarget, backgroundColor: theme.colors.calendarSurface, color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 16 },
   disabled: { opacity: theme.opacity.disabled },
   outlineButton: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.sm, minHeight: theme.layout.touchTarget, alignItems: 'center', justifyContent: 'center', padding: theme.spacing.sm },
+  authButton: { minHeight: theme.auth.buttonHeight, borderRadius: theme.auth.buttonRadius, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, justifyContent: 'center', paddingHorizontal: theme.spacing.md },
+  authButtonPrimary: { backgroundColor: theme.colors.rose, borderColor: theme.colors.rose },
+  authButtonText: { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 15, fontWeight: '600', textAlign: 'center' },
+  authButtonPrimaryText: { color: '#FFFFFF' },
 });
