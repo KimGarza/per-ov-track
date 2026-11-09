@@ -44,7 +44,7 @@ export default function HomeScreen() {
   const [selected, setSelected] = useState(today);
   const [journalOpen, setJournalOpen] = useState(false);
   const [verseOpen, setVerseOpen] = useState(false);
-  const predictions = useMemo(() => predictedCalendar(data, onboarding, today, month), [data, onboarding, today, month]);
+  const predictions = useMemo(() => ({ ...predictedCalendar(data, onboarding, today, month), ...predictedCalendar(data, onboarding, today, new Date(month.getFullYear(), month.getMonth() + 1, 1)) }), [data, onboarding, today, month]);
   const [editor, setEditor] = useState<Editor>(null);
   const [jumpOpen, setJumpOpen] = useState(false);
   const [swipeStart, setSwipeStart] = useState<{ x: number; y: number } | null>(null);
