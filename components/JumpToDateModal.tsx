@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { dateKey, parseDate } from '@/utils/cycle';
+import { parseDate } from '@/utils/cycle';
 import { useAppTheme } from './ThemeProvider';
 
 export function JumpToDateModal({ visible, initial, onClose, onJump }: {
