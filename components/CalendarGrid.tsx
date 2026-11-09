@@ -5,6 +5,7 @@ import { createGlobalStyles, type Theme } from '@/constants/Theme';
 import { estimateCyclePhases, mixColor, dateKey, type EstimatedPhase, type CycleKind, type DateRange } from '@/utils/cycle';
 import { christianDays } from '@/utils/faith';
 import { useAppTheme } from './ThemeProvider';
+import { TitleFlourish } from './DecorativeFrame';
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export function DropMarker({ color, size }: { color: string; size?: number }) {
@@ -30,7 +31,7 @@ export function MonthNavigation({ month, onChange, onTitlePress, compact = false
 }) {
   const { theme, styles: g } = useAppTheme();
   const s = useMemo(() => createStyles(theme), [theme]);
-  const title = <Pressable accessibilityRole="button" accessibilityLabel={`${month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}, open calendar`} onPress={onTitlePress} disabled={!onTitlePress} style={s.monthTitle}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[s.month, compact && { fontSize: theme.calendar.compactMonthFontSize }]}>{month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text></Pressable>;
+  const title = <Pressable accessibilityRole="button" accessibilityLabel={`${month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}, open calendar`} onPress={onTitlePress} disabled={!onTitlePress} style={s.monthTitle}><View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}><TitleFlourish /><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[s.month, compact && { fontSize: theme.calendar.compactMonthFontSize }]}>{month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text><TitleFlourish /></View></Pressable>;
   const previous = <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => onChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={s.arrow}><Text style={s.arrowText}>‹</Text></Pressable>;
   const next = <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => onChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={s.arrow}><Text style={s.arrowText}>›</Text></Pressable>;
   if (!onUpdate) return <View style={s.monthRow}>{previous}{title}{next}</View>;
