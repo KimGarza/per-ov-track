@@ -9,6 +9,7 @@ import { Text } from '@/components/Themed';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FaithBackdrop, ThemeFloralAccent } from '@/components/FaithBackdrop';
 import { DailyVerseReference, VerseIconButton, VersePopup } from '@/components/DailyVerse';
+import { DecorativeFrame, OrnamentalDivider, TitleFlourish } from '@/components/DecorativeFrame';
 import { CalendarGrid, CalendarLegend, MonthNavigation } from '@/components/CalendarGrid';
 import { CycleOnboardingModal } from '@/components/CycleOnboardingModal';
 import { predictedCalendar } from '@/utils/onboarding';
@@ -70,13 +71,14 @@ export default function HomeScreen() {
         {error && <Pressable accessibilityRole="button" onPress={() => { void retry(); }} style={g.button}><Text style={g.buttonText}>Try again</Text></Pressable>}
       </View> : <>
         <View style={[g.card, s.calendar]}>
-          <ThemeFloralAccent />
+          <DecorativeFrame variant="calendar" />
           <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setEditor({ type: 'cycle', calendarFirst: true })} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
           <CalendarGrid month={month} today={today} days={data.days} predictedDays={predictions} pendingDays={data.pendingDays} phaseDays={Object.keys(data.days).length ? undefined : {}} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
+          <OrnamentalDivider />
           <CalendarLegend compact />
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><ThemeFloralAccent />
-          <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><DecorativeFrame variant="verse" />
+          <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse <TitleFlourish /></Text>
           <Text style={[g.body, { fontFamily: theme.fonts.heading, fontSize: 22, lineHeight: 28 }]}>{dailyVerse(today).text}</Text>
           <Text style={s.savedPreview}>{dailyVerse(today).reference} · KJV · Tap to reflect</Text>
         </Pressable>
