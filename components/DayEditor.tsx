@@ -2,7 +2,7 @@ import { CycleOptions } from './CycleOptions';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { Text } from '@/components/Themed';
-import { holidayFor, verses } from '@/utils/faith';
+import { dailyVerse, holidayFor, verses } from '@/utils/faith';
 import { dateKey, parseDate, type PeriodFlow, type CervicalMucus, type CycleKind, type JournalEntry } from '@/utils/cycle';
 import { useAppTheme } from './ThemeProvider';
 import { useCycleData } from './CycleDataProvider';
@@ -62,6 +62,11 @@ export function DayEditor({ day, initialField, onClose }: { day: string; initial
         <Text style={{ color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 15, fontWeight: '600' }}>{field.charAt(0).toUpperCase() + field.slice(1)}</Text>
         <TextInput accessibilityLabel={field.charAt(0).toUpperCase() + field.slice(1)} autoFocus={field === initialField} editable={!busy} value={entry[field]} onChangeText={value => setEntry(previous => ({ ...previous, [field]: value }))} multiline={field !== 'mood'} maxLength={field === 'notes' ? 5000 : 1000} placeholder={field === 'mood' ? 'e.g. irritable, emotional, calm…' : field === 'symptoms' ? 'What symptoms did you notice?' : 'Anything you want to remember'} placeholderTextColor={theme.colors.placeholder} style={[g.input, field === 'mood' && !entry.mood && { fontStyle: 'italic' }, field !== 'mood' && { minHeight: 90, textAlignVertical: 'top' }]} />
       </View>)}
+      <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.border, paddingTop: theme.spacing.md, gap: theme.spacing.xs }}>
+        <Text style={[g.sectionHeading, { fontSize: 22 }]}>✝ Scripture for this day</Text>
+        <Text style={g.caption}>{dailyVerse(day).reference} · KJV</Text>
+        <Text style={g.body}>{dailyVerse(day).text}</Text>
+      </View>
       {error && <Text accessibilityRole="alert" style={{ color: theme.colors.todayPeriod }}>{error}</Text>}
     </View>
   </EditSheet>;
