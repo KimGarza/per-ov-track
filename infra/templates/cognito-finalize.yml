@@ -5,12 +5,16 @@ Parameters:
     AllowedValues: [dev, stage, prod]
   CallbackUrl: {Type: String}
   LogoutUrl: {Type: String}
+  LocalWebCallbackUrl:
+    Type: String
+    Default: ''
   EnableGoogle:
     Type: String
     Default: 'false'
     AllowedValues: ['true', 'false']
 Conditions:
   WithGoogle: !Equals [!Ref EnableGoogle, 'true']
+  WithLocalWeb: !Not [!Equals [!Ref LocalWebCallbackUrl, '']]
 Resources:
   HostedDomain:
     Type: AWS::Cognito::UserPoolDomain
@@ -60,7 +64,10 @@ Resources:
         - WithGoogle
         - [COGNITO, Google, SignInWithApple]
         - [COGNITO, SignInWithApple]
-      CallbackURLs: [!Ref CallbackUrl]
+      CallbackURLs: !If
+        - WithLocalWeb
+        - [!Ref CallbackUrl, !Ref LocalWebCallbackUrl]
+        - [!Ref CallbackUrl]
       LogoutURLs: [!Ref LogoutUrl]
       PreventUserExistenceErrors: ENABLED
 Outputs:
