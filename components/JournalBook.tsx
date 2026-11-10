@@ -59,6 +59,7 @@ export function JournalBook({ onClose }: { onClose: () => void }) {
   const ink = format.ink === 'rose' ? c.todayPeriod : format.ink === 'olive' ? c.todayFertile : c.text;
   const highlight = format.highlight === 'rose' ? c.roseWash : format.highlight === 'sage' ? c.calendarFertile : c.calendarSurface;
   return <EditSheet primary title="My little journal" busy={busy} onClose={() => { void save(true); }} footer={<View style={{ gap: theme.spacing.sm }}>{error && <Text accessibilityRole="alert" style={{ color: c.todayPeriod }}>{error}</Text>}<Pressable accessibilityRole="button" disabled={busy || !ready} onPress={() => { void save(); }} style={[g.button, (busy || !ready) && g.disabled]}><Text style={g.buttonText}>{busy ? 'Saving your page…' : saved ? '✓ Page saved' : 'Save journal page'}</Text></Pressable></View>}>
+    <Text style={[g.caption, { marginBottom: theme.spacing.md, textAlign: 'center' }]}>♡ Your journal is personal. Entries are saved to your device and synced to your account when available. Keep your device and account secure.</Text>
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
       <Pressable accessibilityRole="button" accessibilityLabel="Previous journal page" disabled={busy} onPress={() => { void flip(-1); }} style={g.outlineButton}><Text style={{ color: c.text }}>‹</Text></Pressable>
       <Text style={[g.heading, { flex: 1, textAlign: 'center', fontSize: 23 }]}>{parseDate(day).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>

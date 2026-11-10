@@ -16,7 +16,7 @@ export const usePrimaryPanel = () => useContext(MenuContext).openPanel;
 export function MenuButton() {
   const { openMenu: open } = useContext(MenuContext);
   const { theme } = useAppTheme();
-  return <Pressable accessibilityRole="button" accessibilityLabel="Open navigation menu" onPress={open} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24, color: theme.colors.onBackground }}>☰</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel="Open navigation menu" onPress={open} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><View style={{ gap: 5, alignItems: 'center' }}>{[25, 19, 25].map((width, i) => <View key={i} style={{ width, height: 2.5, borderRadius: 3, backgroundColor: theme.colors.onBackground }} />)}</View></Pressable>;
 }
 export function SideMenuProvider({ children }: { children: ReactNode }) {
   const [externalOverlay, setExternalOverlay] = useState(false);
@@ -24,11 +24,11 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
   const [slide] = useState(() => new Animated.Value(-320));
   useEffect(() => { if (open) { slide.setValue(-320); Animated.timing(slide, { toValue: 0, duration: 220, useNativeDriver: true }).start(); } }, [open, slide]);
   const { theme, styles: g, setName, name } = useAppTheme();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const [themeAnchor, setThemeAnchor] = useState<AnchorRect | null>(null);
   const [panel, setPanel] = useState<PrimaryPanel | null>(null);
   const openPanel = useCallback((value: PrimaryPanel) => { setOpen(false); setPanel(value); }, []);
-  const items = [{ label: 'Themes', icon: '✿', id: 'themes' }, { label: 'Settings', icon: '⚙', id: 'settings' }, { label: 'Billing', icon: '▤', id: 'billing' }, { label: 'Subscription', icon: '♡', id: 'subscription' }] as const;
+  const items = [{ label: 'Themes', icon: '✿', id: 'themes' }, { label: 'Cycle Settings', icon: '◷', id: 'settings' }, { label: 'Subscription / Billing', icon: '▤', id: 'subscription' }] as const;
   const inactive = open || !!panel || externalOverlay;
   const softenCalendar = !!panel || externalOverlay;
   const nativeBlur = Platform.OS === 'android' && Number(Platform.Version) >= 31;
@@ -43,12 +43,14 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
         <Pressable accessibilityRole="button" accessibilityLabel="Close navigation menu" onPress={() => setOpen(false)} style={{ position: 'absolute', inset: 0, backgroundColor: theme.colors.overlay }} />
         <Animated.View style={{ width: '82%', maxWidth: 320, transform: [{ translateX: slide }] }}><SafeAreaView style={{ flex: 1, width: '100%', backgroundColor: theme.colors.surface, borderRightWidth: 1, borderColor: theme.colors.border }}>
           <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={[g.heading, { fontSize: 30 }]}>✝ Crimson Rhythm</Text><Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={() => setOpen(false)} style={g.outlineButton}><Text style={{ color: theme.colors.text }}>×</Text></Pressable></View>
-            <Text style={[g.body, { fontStyle: 'italic' }]}>Grace for every season.</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="My Account" onPress={() => { setOpen(false); router.push('/account'); }} style={[g.outlineButton, { alignItems: 'flex-start', paddingHorizontal: theme.spacing.md }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={[g.heading, { fontSize: 30 }]}>✝ Crimson Rhythm</Text><Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={() => setOpen(false)} style={{ padding: 8, minWidth: 40, alignItems: 'center' }}><Text style={{ color: theme.colors.text, fontSize: 26 }}>×</Text></Pressable></View>
+            <Text style={[g.body, { fontStyle: 'italic' }]}>Grace for every cycle</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 }}><View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: theme.colors.roseWash, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.colors.rose }}>✿</Text></View><Text numberOfLines={1} style={{ flex: 1, color: theme.colors.text }}>{profile?.email ?? 'My account'}</Text></View>
+            <Pressable accessibilityRole="button" accessibilityLabel="My Account" onPress={() => { setOpen(false); router.push('/account'); }} style={{ alignItems: 'flex-start', paddingVertical: 12, paddingHorizontal: theme.spacing.sm, borderRadius: 12 }}>
               <Text style={{ color: theme.colors.text, fontSize: 16 }}>◉   My Account{profile?.given_name ? ` · ${profile.given_name}` : profile?.name ? ` · ${profile.name}` : ''}</Text>
             </Pressable>
             {items.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.label} onPress={event => { if (item.id === 'themes') event.currentTarget.measureInWindow((x, y, width, height) => setThemeAnchor({ x, y, width, height })); else openPanel(item.id); }} style={[g.outlineButton, { alignItems: 'flex-start', paddingHorizontal: theme.spacing.md }]}><Text style={{ color: theme.colors.text, fontSize: 16 }}>{item.icon}   {item.label}</Text></Pressable>)}
+            <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={() => { setOpen(false); void signOut().then(() => router.replace('/welcome')); }} style={{ marginTop: 20, padding: 12 }}><Text style={{ color: theme.colors.rose, fontSize: 16 }}>↪  Sign out</Text></Pressable>
           </ScrollView>
         </SafeAreaView></Animated.View>
       </View>)}

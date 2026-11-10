@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import pg from 'pg';
+import { applyMigrations } from './migrate.mjs';
 
 const secrets = new SecretsManagerClient({});
 let poolPromise;
@@ -32,6 +33,11 @@ async function pool() {
   return poolPromise;
 }
 export async function handler(event) {
+  // Direct IAM-authorized Lambda invoke only; HTTP requests always have requestContext.
+  if (event?.internalOperation === 'migrate' && !event.requestContext) {
+    try { return json(200, await applyMigrations(await pool())); }
+    catch (error) { console.error('Schema migration failed', { code: error.code, name: error.name }); return json(503, { error: 'Migration failed' }); }
+  }
   const method = event.requestContext?.http?.method;
   const path = event.rawPath ?? '';
   if (method === 'GET' && path.endsWith('/health')) return json(200, { status: 'ok' });
@@ -89,7 +95,7 @@ export async function handler(event) {
     try {
       const db = await pool();
       const { rows } = await db.query(
-        'SELECT id, email, first_name, last_name, display_name, created_at FROM users WHERE cognito_sub = $1',
+        'SELECT id, email, username, avatar, created_at FROM users WHERE cognito_sub = $1',
         [userId],
       );
       return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
@@ -101,22 +107,40 @@ export async function handler(event) {
   if (method === 'PATCH' && path.endsWith('/users/me')) {
     try {
       const input = JSON.parse(event.body || '{}');
-      const firstName = typeof input.first_name === 'string' ? input.first_name.trim().slice(0, 80) : '';
-      const lastName = typeof input.last_name === 'string' ? input.last_name.trim().slice(0, 80) : '';
-      if (!firstName) return json(400, { error: 'First name is required' });
+      if (typeof input.username !== 'string' || input.username.length > 40 || (input.username && !/^[a-zA-Z0-9_.-]{3,40}$/.test(input.username))) return json(400, { error: 'Username must be 3–40 letters, numbers, dots, underscores or hyphens, or empty.' });
+      if (input.avatar != null && !['flower','dove','heart','cross','sun','leaf'].includes(input.avatar)) return json(400, { error: 'Unknown avatar' });
       const db = await pool();
       const { rows } = await db.query(
-        `UPDATE users SET first_name = $1, last_name = $2,
-          display_name = TRIM(CONCAT($1, ' ', $2)), updated_at = NOW()
-          WHERE cognito_sub = $3 RETURNING id, first_name, last_name, display_name`,
-        [firstName, lastName, userId],
+        'UPDATE users SET username = $1, avatar = COALESCE($2, avatar), updated_at = NOW() WHERE cognito_sub = $3 RETURNING username, avatar, email',
+        [input.username || null, input.avatar ?? null, userId],
       );
-      if (!rows.length) return json(404, { error: 'Account not initialized' });
-      return json(200, { user: rows[0] });
-    } catch (error) {
-      console.error('Account update failed', { name: error.name, code: error.code });
-      return json(503, { error: 'Account update unavailable' });
-    }
+      return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
+    } catch (error) { if (error.code === '23505') return json(409, { error: 'Username already taken' }); console.error('Account update failed', { code: error.code }); return json(503, { error: 'Account update unavailable' }); }
+  }
+  if (method === 'POST' && path.endsWith('/cycle/reset')) {
+    try {
+      const input = JSON.parse(event.body || '{}');
+      const scope = input.scope;
+      const from = input.from;
+      if (!['all', 'from'].includes(scope) || (scope === 'from' && (typeof from !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(from) || Number.isNaN(Date.parse(from)) || from > new Date().toISOString().slice(0,10)))) return json(400, { error: 'Invalid reset range' });
+      const db = await pool();
+      const client = await db.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(
+          scope === 'all'
+            ? 'DELETE FROM cycle_day_entries WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1)'
+            : 'DELETE FROM cycle_day_entries WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1) AND entry_date >= $2::date',
+          scope === 'all' ? [userId] : [userId, from],
+        );
+        if (scope === 'all') {
+          await client.query('DELETE FROM cycle_profiles WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1)', [userId]);
+        }
+        await client.query('COMMIT');
+        return json(200, { reset: true });
+      } catch (error) { await client.query('ROLLBACK'); throw error; }
+      finally { client.release(); }
+    } catch (error) { console.error('Cycle reset failed', { code: error.code }); return json(503, { error: 'Cycle reset unavailable' }); }
   }
   if (path.endsWith('/cycle/profile') && ['GET', 'PUT'].includes(method)) {
     try {
@@ -161,6 +185,7 @@ export async function handler(event) {
       }
       const input = JSON.parse(event.body || '{}');
       if (typeof input.date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(input.date) || Number.isNaN(Date.parse(input.date)) || ![null, 'menstrual', 'ovulation'].includes(input.kind ?? null)) return json(400, { error: 'Invalid day entry' });
+      if (input.kind && input.confirmed !== false && input.date > new Date().toISOString().slice(0, 10)) return json(400, { error: 'Future cycle observations are not allowed' });
       const string = (value, max = 5000) => typeof value === 'string' ? value.slice(0, max) : null;
       const flow = input.flow ?? null, mucus = input.mucus ?? null;
       if (flow && !['spotting','light','normal','heavy'].includes(flow) || mucus && !['dry','sticky','creamy','watery','stretchy'].includes(mucus)) return json(400, { error: 'Invalid observation' });

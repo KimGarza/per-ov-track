@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/Themed';
 import { createGlobalStyles, type Theme } from '@/constants/Theme';
-import { estimateCyclePhases, mixColor, dateKey, type EstimatedPhase, type CycleKind, type DateRange } from '@/utils/cycle';
+import { estimateCyclePhases, mixColor, dateKey, addDays, type EstimatedPhase, type CycleKind, type DateRange } from '@/utils/cycle';
 import { christianDays } from '@/utils/faith';
 import { useAppTheme } from './ThemeProvider';
 import { TitleFlourish } from './DecorativeFrame';
@@ -50,6 +50,14 @@ export function CalendarGrid({ month, today, days, selected, range, previewKind,
   const c = theme.colors;
   const phases = useMemo(() => phaseDays ?? estimateCyclePhases({ version: 1, days, pendingDays, journal: {} }, month, today), [phaseDays, days, pendingDays, month, today]);
   const holidays = useMemo(() => christianDays(month.getFullYear()), [month]);
+  const premenstrual = useMemo(() => {
+    const dates = new Set<string>();
+    for (const [key, kind] of Object.entries(predictedDays)) {
+      if (kind !== 'menstrual' || predictedDays[addDays(key, -1)] === 'menstrual') continue;
+      for (let offset = 1; offset <= 4; offset++) dates.add(addDays(key, -offset));
+    }
+    return dates;
+  }, [predictedDays]);
   const totalDays = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const count = Math.ceil((month.getDay() + totalDays) / 7) * 7;
   return <>
@@ -65,8 +73,9 @@ export function CalendarGrid({ month, today, days, selected, range, previewKind,
       const displayFill = estimated ? mixColor(fill, c.calendarSurface, theme.opacity.predictionBlend) : fill;
       const phase = !kind && !inRange ? phases[key] : undefined;
       const isToday = key === today;
+      const isPremenstrual = premenstrual.has(key) && !kind && !inRange;
       const markerColor = kind === 'menstrual' ? c.todayPeriod : kind === 'ovulation' ? c.todayFertile : c.today;
-      const label = [new Date(month.getFullYear(), month.getMonth(), day).toDateString(), isToday && 'Today', phase && `Estimated ${phase} phase`, kind === 'menstrual' && 'Menstrual', estimated && 'Unconfirmed estimate', kind === 'ovulation' && 'Ovulation', inRange && 'In selected range', holidays[key]?.name].filter(Boolean).join(', ');
+      const label = [new Date(month.getFullYear(), month.getMonth(), day).toDateString(), isToday && 'Today', isPremenstrual && 'Possible premenstrual days (estimate)', phase && `Estimated ${phase} phase`, kind === 'menstrual' && 'Menstrual', estimated && 'Unconfirmed estimate', kind === 'ovulation' && 'Ovulation', inRange && 'In selected range', holidays[key]?.name].filter(Boolean).join(', ');
       return <View key={key} style={[s.cell, { height: rowHeight }, isToday && { paddingBottom: 8 }]}>
         <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: inRange || key === selected }} onPress={() => onSelect(key)} style={[
           s.day,
@@ -75,7 +84,8 @@ export function CalendarGrid({ month, today, days, selected, range, previewKind,
           (key === selected || inRange) && { borderWidth: 1.5, borderColor: kind === 'menstrual' ? c.todayPeriod : kind === 'ovulation' ? c.todayFertile : c.calendarText },
           isToday && { borderWidth: 2, borderColor: markerColor, borderRadius: theme.radius.pill },
         ]}>
-          {phase && <View testID={`estimated-${phase}`} pointerEvents="none" accessible={false} style={[StyleSheet.absoluteFill, { borderRadius: theme.radius.pill, backgroundColor: phase === 'luteal' ? c.calendarLuteal : c.calendarFollicular }]} />}
+          {isPremenstrual && <View testID="predicted-premenstrual" pointerEvents="none" accessible={false} style={[StyleSheet.absoluteFill, { borderRadius: theme.radius.pill, backgroundColor: mixColor(c.calendarLuteal, c.calendarSurface, 0.22) }]} />}
+          {phase && !isPremenstrual && <View testID={`estimated-${phase}`} pointerEvents="none" accessible={false} style={[StyleSheet.absoluteFill, { borderRadius: theme.radius.pill, backgroundColor: phase === 'luteal' ? c.calendarLuteal : c.calendarFollicular }]} />}
           {kind === 'menstrual' && <DropMarker color={displayFill} />}
           {kind === 'ovulation' && <FlowerMarker color={displayFill} />}
           {holidays[key] && <Text accessible={false} style={{ position: 'absolute', top: 1, right: 2, color: c.today, fontSize: 10 }}>✝</Text>}
@@ -92,9 +102,9 @@ export function CalendarLegend({ compact = false }: { compact?: boolean }) {
   const s = useMemo(() => createStyles(theme), [theme]);
   return <><View style={[s.legend, compact && { paddingTop: 4, marginTop: 4, gap: 12 }]}>
     {([['Menstrual', theme.colors.calendarPeriod], ['Ovulation', theme.colors.calendarFertile]] as const).map(([label, color]) => <View key={label} style={s.legendItem}>{label === 'Ovulation' ? <FlowerMarker color={color} size={15} /> : <DropMarker color={color} size={15} />}<Text style={s.legendText}>{label}</Text></View>)}
-    {(['follicular', 'luteal'] as const).map(phase => <View key={phase} style={s.legendItem}><View style={[s.dot, { backgroundColor: phase === 'luteal' ? theme.colors.calendarLuteal : theme.colors.calendarFollicular }]} /><Text style={s.legendText}>{phase === 'luteal' ? 'Luteal' : 'Follicular'} · est.</Text></View>)}
+
     <View style={s.legendItem}>{todayMarker === 'heart' ? <Text style={{ color: theme.colors.todayPeriod, fontSize: 12 }}>♥</Text> : <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.calendarText }} />}<Text style={s.legendText}>Today</Text></View>
-  </View><Text style={[s.legendText, { textAlign: 'center', marginTop: theme.spacing.xs }]}>Phase estimates only · Ovulation is not confirmed</Text></>;
+  </View></>;
 }
 const createStyles = (theme: Theme) => {
   const g = createGlobalStyles(theme);
@@ -110,7 +120,7 @@ const createStyles = (theme: Theme) => {
     cell: { width: '14.2857%', height: theme.calendar.defaultRowHeight, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
     day: { width: '100%', maxWidth: theme.calendar.dayMaxWidth, aspectRatio: 1, borderRadius: theme.radius.pill, alignItems: 'center', justifyContent: 'center' },
     dayText: { color: c.calendarText, fontSize: theme.calendar.dayFontSize, fontFamily: theme.fonts.body },
-    legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: theme.spacing.md, borderTopWidth: 1, borderTopColor: c.border, paddingTop: theme.spacing.md, marginTop: theme.spacing.sm },
+    legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: theme.spacing.sm, borderTopWidth: 1, borderTopColor: c.border, paddingTop: theme.spacing.sm, marginTop: theme.spacing.xs },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     dot: { width: 13, height: 13, borderRadius: theme.radius.pill },
     legendText: { ...g.caption, color: c.text },

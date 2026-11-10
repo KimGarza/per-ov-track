@@ -19,24 +19,44 @@ function useCycleState() {
   const queue = useRef(Promise.resolve());
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    setReady(false);
-    current.current = emptyCycleData();
-    setData(emptyCycleData());
-    setOnboarding(defaultOnboarding());
+  // The effect only starts asynchronous storage work; state is updated after it resolves.
+  // The active flag prevents an old account's load from updating a newly signed-in account.
+  const load = useCallback(async (active: () => boolean = () => true) => {
     if (!authReady || !accountStorageKey || !accountOnboardingKey) return;
-    return Promise.all([AsyncStorage.getItem(accountStorageKey), AsyncStorage.getItem(accountOnboardingKey)]).then(([saved, savedOnboarding]) => {
-    const next = saved ? readCycleData(saved) : emptyCycleData();
-    if (savedOnboarding) setOnboarding({ ...defaultOnboarding(), ...JSON.parse(savedOnboarding) });
-    current.current = next;
-    setData(next);
-    setError(null);
-    setReady(true);
-  }).catch(() => {
-    setError('Your saved data could not be loaded. Please try again.');
-  });
+    try {
+      const [saved, savedOnboarding] = await Promise.all([
+        AsyncStorage.getItem(accountStorageKey),
+        AsyncStorage.getItem(accountOnboardingKey),
+      ]);
+      if (!active()) return;
+      const next = saved ? readCycleData(saved) : emptyCycleData();
+      const answers = savedOnboarding ? { ...defaultOnboarding(), ...JSON.parse(savedOnboarding) } : defaultOnboarding();
+      current.current = next;
+      setData(next);
+      setOnboarding(answers);
+      setError(null);
+      setReady(true);
+    } catch {
+      if (active()) setError('Your saved data could not be loaded. Please try again.');
+    }
   }, [authReady, accountStorageKey, accountOnboardingKey]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    // Defer the initial state reset to the async continuation, avoiding
+    // synchronous setState during the effect's execution.
+    const initialize = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      current.current = emptyCycleData();
+      setData(emptyCycleData());
+      setOnboarding(defaultOnboarding());
+      setError(null);
+      setReady(false);
+      await load(() => active);
+    };
+    void initialize();
+    return () => { active = false; };
+  }, [load]);
   const commit = useCallback((update: (previous: CycleData) => CycleData) => {
     if (!ready || !accountStorageKey) return Promise.reject(new Error('Wait for your account data to load.'));
     const operation = queue.current.then(async () => {
@@ -56,13 +76,17 @@ function useCycleState() {
     queue.current = operation.catch(() => {});
     return operation;
   }, [ready, session, api, accountStorageKey]);
-  const saveRange = useCallback((kind: CycleKind | null, start: string, end: string, observation?: CycleObservation) => commit(previous => applyLoggedRange(previous, kind, start, end, dateKey(new Date()), observation)), [commit]);
+  const saveRange = useCallback((kind: CycleKind | null, start: string, end: string, observation?: CycleObservation) => {
+    if (kind && (start > dateKey(new Date()) || end > dateKey(new Date()))) return Promise.reject(new Error('Cannot record future menstrual or ovulation dates.'));
+    return commit(previous => applyLoggedRange(previous, kind, start, end, dateKey(new Date()), observation));
+  }, [commit]);
   const saveJournal = useCallback((day: string, entry: JournalEntry) => {
     const key = dateKey(parseDate(day));
     return commit(previous => ({ ...previous, journal: { ...previous.journal, [key]: entry } }));
   }, [commit]);
   const saveDay = useCallback((day: string, kind: CycleKind | null, entry: JournalEntry, confirmed = true, observation?: CycleObservation) => {
     const key = dateKey(parseDate(day));
+    if (kind && key > dateKey(new Date())) return Promise.reject(new Error('Cannot record future menstrual or ovulation dates.'));
     return commit(previous => {
       const next = applyLoggedRange(previous, kind, key, key, dateKey(new Date()), observation);
       if (kind && !confirmed) next.pendingDays = { ...next.pendingDays, [key]: true };
@@ -94,7 +118,27 @@ function useCycleState() {
     }
     setOnboarding(answers);
   }, [commit, session, api, accountOnboardingKey]);
-  return { data, onboarding, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
+  const resetCycleData = useCallback(async (from: string | null) => {
+    if (!ready || !session || !api || !accountStorageKey || !accountOnboardingKey) throw new Error('Account connection is required to reset data.');
+    if (from && (dateKey(parseDate(from)) > dateKey(new Date()))) throw new Error('Choose today or an earlier date.');
+    // Serialize with outstanding writes so an older upload cannot restore deleted entries.
+    await queue.current;
+    // Delete remotely before touching local records; never re-upload deleted days.
+    const response = await fetch(`${api}/cycle/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(from ? { scope: 'from', from } : { scope: 'all' }) });
+    if (!response.ok) throw new Error('Could not reset cloud data. Nothing was deleted locally.');
+    const filter = <T,>(values?: Record<string, T>) => Object.fromEntries(Object.entries(values ?? {}).filter(([day]) => from && day < from)) as Record<string, T>;
+    const next: CycleData = from ? {
+      ...current.current, days: filter(current.current.days), journal: filter(current.current.journal),
+      observations: filter(current.current.observations), pendingDays: filter(current.current.pendingDays),
+      diary: filter(current.current.diary), diaryStyles: filter(current.current.diaryStyles),
+      reflections: filter(current.current.reflections),
+    } : emptyCycleData();
+    await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
+    if (!from) { await AsyncStorage.removeItem(accountOnboardingKey); setOnboarding(defaultOnboarding()); }
+    current.current = next;
+    setData(next);
+  }, [ready, session, api, accountStorageKey, accountOnboardingKey]);
+  return { data, onboarding, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
 const CycleContext = createContext<ReturnType<typeof useCycleState> | null>(null);
 export function CycleDataProvider({ children }: PropsWithChildren) {

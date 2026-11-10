@@ -13,6 +13,7 @@ import { DecorativeFrame, OrnamentalDivider, TitleFlourish } from '@/components/
 import { CalendarGrid, CalendarLegend, MonthNavigation } from '@/components/CalendarGrid';
 import { CycleOnboardingModal } from '@/components/CycleOnboardingModal';
 import { predictedCalendar } from '@/utils/onboarding';
+import { JumpToDateModal } from '@/components/JumpToDateModal';
 import { CycleEditor } from '@/components/CycleEditor';
 import { DayEditor } from '@/components/DayEditor';
 import { useCycleData } from '@/components/CycleDataProvider';
@@ -44,8 +45,10 @@ export default function HomeScreen() {
   const [selected, setSelected] = useState(today);
   const [journalOpen, setJournalOpen] = useState(false);
   const [verseOpen, setVerseOpen] = useState(false);
-  const predictions = useMemo(() => predictedCalendar(data, onboarding, today, month), [data, onboarding, today, month]);
+  const predictions = useMemo(() => ({ ...predictedCalendar(data, onboarding, today, month), ...predictedCalendar(data, onboarding, today, new Date(month.getFullYear(), month.getMonth() + 1, 1)) }), [data, onboarding, today, month]);
   const [editor, setEditor] = useState<Editor>(null);
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const [swipeStart, setSwipeStart] = useState<{ x: number; y: number } | null>(null);
   const rows = Math.ceil((month.getDay() + new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()) / 7);
   const reserveCheckin = viewport.height >= 560 ? theme.calendar.checkinHeight : viewport.height >= 480 ? 72 : 0;
   const calendarHeight = Math.min(viewport.height * 0.7, viewport.height - theme.calendar.headerHeight - reserveCheckin - theme.spacing.md);
@@ -70,9 +73,17 @@ export default function HomeScreen() {
         <Text accessibilityLiveRegion="polite" style={g.body}>{error ?? 'Loading your calendar…'}</Text>
         {error && <Pressable accessibilityRole="button" onPress={() => { void retry(); }} style={g.button}><Text style={g.buttonText}>Try again</Text></Pressable>}
       </View> : <>
-        <View style={[g.card, s.calendar]}>
-          <DecorativeFrame variant="calendar" />
-          <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setEditor({ type: 'cycle', calendarFirst: true })} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
+        <View style={[g.card, s.calendar]} onTouchStart={event => setSwipeStart({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })} onTouchEnd={event => {
+          if (!swipeStart) return;
+          const dx = event.nativeEvent.pageX - swipeStart.x;
+          const dy = event.nativeEvent.pageY - swipeStart.y;
+          setSwipeStart(null);
+          if (Math.abs(dx) < 65 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+          changeMonth(new Date(month.getFullYear(), month.getMonth() + (dx > 0 ? -1 : 1), 1));
+        }}>
+          <ThemeFloralAccent />
+          <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setJumpOpen(true)} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Return to current month" onPress={() => changeMonth(parseDate(today))} style={{ alignSelf: 'center', padding: 4 }}><Text style={{ color: theme.colors.muted, fontSize: 12 }}>↺ Today</Text></Pressable>
           <CalendarGrid month={month} today={today} days={data.days} predictedDays={predictions} pendingDays={data.pendingDays} phaseDays={Object.keys(data.days).length ? undefined : {}} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
           <OrnamentalDivider />
           <CalendarLegend compact />
@@ -99,11 +110,12 @@ export default function HomeScreen() {
       </>}
     </ScrollView>
     </View>
+    <JumpToDateModal key={jumpOpen ? dateKey(month) : 'closed'} visible={jumpOpen} initial={month} onClose={() => setJumpOpen(false)} onJump={changeMonth} />
     <CycleOnboardingModal visible={ready && !onboarding.completed} onSave={saveOnboarding} />
     {journalOpen && <JournalBook onClose={() => setJournalOpen(false)} />}
     {verseOpen && <VersePopup day={today} onClose={() => setVerseOpen(false)} />}
     {editor?.type === 'cycle' && <CycleEditor initialDate={selected} today={today} calendarFirst={editor.calendarFirst} onClose={() => setEditor(null)} onJournal={day => openDay(day)} />}
-    {editor?.type === 'day' && <DayEditor key={editor.day} day={editor.day} initialField={editor.field} onClose={() => setEditor(null)} />}
+    {editor?.type === 'day' && <DayEditor key={editor.day} day={editor.day} predictedKind={predictions[editor.day]} initialField={editor.field} onClose={() => setEditor(null)} />}
   </SafeAreaView>;
 }
 const createStyles = (theme: Theme, width: number, compact: boolean) => {
