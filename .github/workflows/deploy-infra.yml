@@ -531,7 +531,7 @@ jobs:
             KEY="lambda/api-${GITHUB_SHA}.zip"
             npm install --prefix server/api --omit=dev --no-audit --no-fund
             curl --fail --silent --show-error --location https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem --output server/api/rds-ca.pem
-            (cd server/api && zip -qr "$RUNNER_TEMP/crimson-api.zip" index.mjs rds-ca.pem node_modules)
+            (cd server/api && zip -qr "$RUNNER_TEMP/crimson-api.zip" index.mjs migrate.mjs migrations rds-ca.pem node_modules)
             aws s3 cp "$RUNNER_TEMP/crimson-api.zip" "s3://$BUCKET/$KEY" --only-show-errors
           fi
           echo "key=$KEY" >> "$GITHUB_OUTPUT"
@@ -588,6 +588,28 @@ jobs:
             --capabilities CAPABILITY_NAMED_IAM \
             --region us-east-1 \
             --no-fail-on-empty-changeset
+
+      - name: Apply versioned PostgreSQL migrations before API routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          FUNCTION="crimrhyth-${{ matrix.environment }}-api-handler"
+          aws lambda get-function --function-name "$FUNCTION" --region us-east-1 >/dev/null
+          aws lambda invoke \\
+            --function-name "$FUNCTION" \\
+            --region us-east-1 \\
+            --cli-binary-format raw-in-base64-out \\
+            --payload '{"internalOperation":"migrate"}' \\
+            "$RUNNER_TEMP/migrations-response.json" > "$RUNNER_TEMP/migrations-metadata.json"
+          if jq -e '.FunctionError != null' "$RUNNER_TEMP/migrations-metadata.json" >/dev/null; then
+            echo "::error::Migration Lambda invocation failed."
+            exit 1
+          fi
+          if ! jq -e '.statusCode == 200' "$RUNNER_TEMP/migrations-response.json" >/dev/null; then
+            echo "::error::Database migrations failed; stopping before API routing deployment."
+            exit 1
+          fi
+          jq -r '.body | fromjson | "Migrations applied: \\(.applied | join(", ")) (total: \\(.total))"' "$RUNNER_TEMP/migrations-response.json"
 
       - name: Verify private PostgreSQL connection through Lambda
         if: matrix.environment == 'dev'
