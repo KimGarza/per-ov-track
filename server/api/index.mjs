@@ -109,7 +109,7 @@ export async function handler(event) {
         [input.username || null, input.avatar ?? null, userId],
       );
       return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
-    } catch (error) { console.error('Account update failed', { code: error.code }); return json(503, { error: 'Account update unavailable' }); }
+    } catch (error) { if (error.code === '23505') return json(409, { error: 'Username already taken' }); console.error('Account update failed', { code: error.code }); return json(503, { error: 'Account update unavailable' }); }
   }
   if (method === 'POST' && path.endsWith('/cycle/reset')) {
     try {
@@ -179,6 +179,7 @@ export async function handler(event) {
       }
       const input = JSON.parse(event.body || '{}');
       if (typeof input.date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(input.date) || Number.isNaN(Date.parse(input.date)) || ![null, 'menstrual', 'ovulation'].includes(input.kind ?? null)) return json(400, { error: 'Invalid day entry' });
+      if (input.kind && input.confirmed !== false && input.date > new Date().toISOString().slice(0, 10)) return json(400, { error: 'Future cycle observations are not allowed' });
       const string = (value, max = 5000) => typeof value === 'string' ? value.slice(0, max) : null;
       const flow = input.flow ?? null, mucus = input.mucus ?? null;
       if (flow && !['spotting','light','normal','heavy'].includes(flow) || mucus && !['dry','sticky','creamy','watery','stretchy'].includes(mucus)) return json(400, { error: 'Invalid observation' });
