@@ -8,7 +8,10 @@ import { defaultOnboarding, type CycleOnboarding } from '@/utils/onboarding';
 const onboardingKey = 'crimson-rhythm:cycle-onboarding:v1';
 const storageKey = 'crimson-rhythm:cycle-data:v1';
 function useCycleState() {
-  const { session } = useAuth();
+  const { session, ready: authReady, profile } = useAuth();
+  const accountId = session?.idToken && profile?.sub ? profile.sub : null;
+  const accountStorageKey = accountId ? `${storageKey}:${accountId}` : null;
+  const accountOnboardingKey = accountId ? `${onboardingKey}:${accountId}` : null;
   const api = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
   const [data, setData] = useState<CycleData>(emptyCycleData);
   const [onboarding, setOnboarding] = useState<CycleOnboarding>(defaultOnboarding);
@@ -16,7 +19,13 @@ function useCycleState() {
   const queue = useRef(Promise.resolve());
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const load = useCallback(() => Promise.all([AsyncStorage.getItem(storageKey), AsyncStorage.getItem(onboardingKey)]).then(([saved, savedOnboarding]) => {
+  const load = useCallback(async () => {
+    setReady(false);
+    current.current = emptyCycleData();
+    setData(emptyCycleData());
+    setOnboarding(defaultOnboarding());
+    if (!authReady || !accountStorageKey || !accountOnboardingKey) return;
+    return Promise.all([AsyncStorage.getItem(accountStorageKey), AsyncStorage.getItem(accountOnboardingKey)]).then(([saved, savedOnboarding]) => {
     const next = saved ? readCycleData(saved) : emptyCycleData();
     if (savedOnboarding) setOnboarding({ ...defaultOnboarding(), ...JSON.parse(savedOnboarding) });
     current.current = next;
@@ -25,13 +34,14 @@ function useCycleState() {
     setReady(true);
   }).catch(() => {
     setError('Your saved data could not be loaded. Please try again.');
-  }), []);
+  });
+  }, [authReady, accountStorageKey, accountOnboardingKey]);
   useEffect(() => { void load(); }, [load]);
   const commit = useCallback((update: (previous: CycleData) => CycleData) => {
-    if (!ready) return Promise.reject(new Error('Wait for your saved data to load.'));
+    if (!ready || !accountStorageKey) return Promise.reject(new Error('Wait for your account data to load.'));
     const operation = queue.current.then(async () => {
       const next = update(current.current);
-      await AsyncStorage.setItem(storageKey, JSON.stringify(next));
+      await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
       current.current = next;
       setData(next);
       if (session && api) {
@@ -45,8 +55,11 @@ function useCycleState() {
     });
     queue.current = operation.catch(() => {});
     return operation;
-  }, [ready, session, api]);
-  const saveRange = useCallback((kind: CycleKind | null, start: string, end: string, observation?: CycleObservation) => commit(previous => applyLoggedRange(previous, kind, start, end, dateKey(new Date()), observation)), [commit]);
+  }, [ready, session, api, accountStorageKey]);
+  const saveRange = useCallback((kind: CycleKind | null, start: string, end: string, observation?: CycleObservation) => {
+    if (kind && (start > dateKey(new Date()) || end > dateKey(new Date()))) return Promise.reject(new Error('Cannot record future menstrual or ovulation dates.'));
+    return commit(previous => applyLoggedRange(previous, kind, start, end, dateKey(new Date()), observation));
+  }, [commit]);
   const saveJournal = useCallback((day: string, entry: JournalEntry) => {
     const key = dateKey(parseDate(day));
     return commit(previous => ({ ...previous, journal: { ...previous.journal, [key]: entry } }));
@@ -77,15 +90,16 @@ function useCycleState() {
       if (ovulation) next = applyLoggedRange(next, 'ovulation', ovulation, ovulation, dateKey(new Date()));
       return next;
     });
-    await AsyncStorage.setItem(onboardingKey, JSON.stringify(answers));
+    if (!accountOnboardingKey) throw new Error('Account unavailable');
+    await AsyncStorage.setItem(accountOnboardingKey, JSON.stringify(answers));
     if (session && api) {
       try { const response = await fetch(`${api}/cycle/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(answers) }); if (!response.ok) console.warn('Profile cloud sync unavailable', response.status); }
       catch { console.warn('Profile cloud sync unavailable'); }
     }
     setOnboarding(answers);
-  }, [commit, session, api]);
+  }, [commit, session, api, accountOnboardingKey]);
   const resetCycleData = useCallback(async (from: string | null) => {
-    if (!ready || !session || !api) throw new Error('Account connection is required to reset data.');
+    if (!ready || !session || !api || !accountStorageKey || !accountOnboardingKey) throw new Error('Account connection is required to reset data.');
     if (from && (dateKey(parseDate(from)) > dateKey(new Date()))) throw new Error('Choose today or an earlier date.');
     // Serialize with outstanding writes so an older upload cannot restore deleted entries.
     await queue.current;
@@ -99,11 +113,11 @@ function useCycleState() {
       diary: filter(current.current.diary), diaryStyles: filter(current.current.diaryStyles),
       reflections: filter(current.current.reflections),
     } : emptyCycleData();
-    await AsyncStorage.setItem(storageKey, JSON.stringify(next));
-    if (!from) { await AsyncStorage.removeItem(onboardingKey); setOnboarding(defaultOnboarding()); }
+    await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
+    if (!from) { await AsyncStorage.removeItem(accountOnboardingKey); setOnboarding(defaultOnboarding()); }
     current.current = next;
     setData(next);
-  }, [ready, session, api]);
+  }, [ready, session, api, accountStorageKey, accountOnboardingKey]);
   return { data, onboarding, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
 const CycleContext = createContext<ReturnType<typeof useCycleState> | null>(null);
