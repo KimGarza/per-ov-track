@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import pg from 'pg';
+import { applyMigrations } from './migrate.mjs';
 
 const secrets = new SecretsManagerClient({});
 let poolPromise;
@@ -32,6 +33,11 @@ async function pool() {
   return poolPromise;
 }
 export async function handler(event) {
+  // Direct IAM-authorized Lambda invoke only; HTTP requests always have requestContext.
+  if (event?.internalOperation === 'migrate' && !event.requestContext) {
+    try { return json(200, await applyMigrations(await pool())); }
+    catch (error) { console.error('Schema migration failed', { code: error.code, name: error.name }); return json(503, { error: 'Migration failed' }); }
+  }
   const method = event.requestContext?.http?.method;
   const path = event.rawPath ?? '';
   if (method === 'GET' && path.endsWith('/health')) return json(200, { status: 'ok' });
