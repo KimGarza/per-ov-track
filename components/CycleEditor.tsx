@@ -36,6 +36,7 @@ export function CycleEditor({ initialDate, today, calendarFirst = false, onClose
     setBusy(true);
     try {
       const end = range.end ?? range.start;
+      if (kind && end > today) { setError('You cannot record a period or ovulation after today.'); return; }
       const dates = rangeDates(range.start, end);
       await saveRange(kind, range.start, end, kind === 'menstrual' ? { kind, flow } : kind === 'ovulation' ? { kind, mucus } : undefined);
       setMessage(`${dates.length} ${dates.length === 1 ? 'day' : 'days'} ${kind ? 'saved' : 'cleared'}. Choose another range or switch to the other marking.`);
