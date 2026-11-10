@@ -1,4 +1,4 @@
-import { Alert, Pressable, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, TextInput, View } from 'react-native';
 import { useState } from 'react';
 import { useCycleData } from './CycleDataProvider';
 import { analyzeCycles } from '@/utils/cycleInsights';
