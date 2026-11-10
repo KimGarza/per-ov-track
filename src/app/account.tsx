@@ -42,17 +42,18 @@ export default function AccountScreen() {
     <Stack.Screen options={{ title: 'My Account' }} />
     <Text style={{ color: theme.colors.text, fontSize: 28, fontWeight: '600' }}>My Account</Text>
     <Text style={{ color: theme.colors.text }}>{profile?.email ?? 'Email not provided'}</Text>
-    <Text style={{ color: theme.colors.text }}>First name</Text>
+    <Text style={{ color: theme.colors.text }}>Name (optional)</Text>
+    <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Only add a name if you'd like to personalize your account.</Text>
     <TextInput accessibilityLabel="First name" value={first} onChangeText={setFirst} maxLength={80} autoCapitalize="words" style={inputStyle} />
-    <Text style={{ color: theme.colors.text }}>Last name</Text>
+    <Text style={{ color: theme.colors.text }}>Last name (optional)</Text>
     <TextInput accessibilityLabel="Last name" value={last} onChangeText={setLast} maxLength={80} autoCapitalize="words" style={inputStyle} />
-    <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ padding: 16, borderWidth: 1, borderRadius: 12, borderColor: theme.colors.border }}>
-      <Text style={{ color: theme.colors.text }}>Save Name</Text>
+    <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ padding: 14, borderRadius: 12, backgroundColor: theme.colors.roseWash, alignSelf: 'flex-start' }}>
+      <Text style={{ color: theme.colors.text }}>Save changes</Text>
     </Pressable>
     {saving && <ActivityIndicator />}
     {!!message && <Text style={{ color: theme.colors.text }}>{message}</Text>}
-    <View style={{ height: 1, backgroundColor: theme.colors.border }} />
-    <Pressable accessibilityRole="button" onPress={() => { void signOut().then(() => router.replace('/welcome')); }} style={{ padding: 16, borderWidth: 1, borderRadius: 12, borderColor: theme.colors.border }}>
+
+    <Pressable accessibilityRole="button" onPress={() => { void signOut().then(() => router.replace('/welcome')); }} style={{ padding: 12, alignSelf: 'flex-start' }}>
       <Text style={{ color: theme.colors.text }}>Sign Out</Text>
     </Pressable>
   </ScrollView>;
