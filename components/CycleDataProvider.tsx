@@ -84,7 +84,25 @@ function useCycleState() {
     }
     setOnboarding(answers);
   }, [commit, session, api]);
-  return { data, onboarding, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
+  const resetCycleData = useCallback(async (from: string | null) => {
+    if (!ready || !session || !api) throw new Error('Account connection is required to reset data.');
+    if (from && (dateKey(parseDate(from)) > dateKey(new Date()))) throw new Error('Choose today or an earlier date.');
+    // Delete remotely before touching local records; never re-upload deleted days.
+    const response = await fetch(`${api}/cycle/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(from ? { scope: 'from', from } : { scope: 'all' }) });
+    if (!response.ok) throw new Error('Could not reset cloud data. Nothing was deleted locally.');
+    const filter = <T,>(values?: Record<string, T>) => Object.fromEntries(Object.entries(values ?? {}).filter(([day]) => from && day < from)) as Record<string, T>;
+    const next: CycleData = from ? {
+      ...current.current, days: filter(current.current.days), journal: filter(current.current.journal),
+      observations: filter(current.current.observations), pendingDays: filter(current.current.pendingDays),
+      diary: filter(current.current.diary), diaryStyles: filter(current.current.diaryStyles),
+      reflections: filter(current.current.reflections),
+    } : emptyCycleData();
+    await AsyncStorage.setItem(storageKey, JSON.stringify(next));
+    if (!from) { await AsyncStorage.removeItem(onboardingKey); setOnboarding(defaultOnboarding()); }
+    current.current = next;
+    setData(next);
+  }, [ready, session, api]);
+  return { data, onboarding, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
 const CycleContext = createContext<ReturnType<typeof useCycleState> | null>(null);
 export function CycleDataProvider({ children }: PropsWithChildren) {
