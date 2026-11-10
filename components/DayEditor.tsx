@@ -8,7 +8,7 @@ import { useAppTheme } from './ThemeProvider';
 import { useCycleData } from './CycleDataProvider';
 import { EditSheet } from './EditSheet';
 
-export function DayEditor({ day, initialField, onClose }: { day: string; initialField?: keyof JournalEntry; onClose: () => void }) {
+export function DayEditor({ day, initialField, onClose, predictedKind }: { day: string; initialField?: keyof JournalEntry; onClose: () => void; predictedKind?: CycleKind }) {
   const { theme, styles: g } = useAppTheme();
   const { data, saveDay, ready } = useCycleData();
   const holiday = holidayFor(day);
