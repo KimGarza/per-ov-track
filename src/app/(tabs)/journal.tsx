@@ -1,4 +1,7 @@
-import { Redirect } from 'expo-router';
-export default function LegacyPanelRoute() {
-  return <Redirect href={{ pathname: '/', params: { panel: 'journal' } }} />;
+import { ScrollView } from 'react-native';
+import { JournalContent } from '@/components/JournalContent';
+import { useAppTheme } from '@/components/ThemeProvider';
+export default function JournalContentScreen() {
+  const { styles } = useAppTheme();
+  return <ScrollView style={styles.screen} contentContainerStyle={styles.content}><JournalContent /></ScrollView>;
 }
