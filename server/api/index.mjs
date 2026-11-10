@@ -111,6 +111,31 @@ export async function handler(event) {
       return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
     } catch (error) { console.error('Account update failed', { code: error.code }); return json(503, { error: 'Account update unavailable' }); }
   }
+  if (method === 'POST' && path.endsWith('/cycle/reset')) {
+    try {
+      const input = JSON.parse(event.body || '{}');
+      const scope = input.scope;
+      const from = input.from;
+      if (!['all', 'from'].includes(scope) || (scope === 'from' && (typeof from !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(from) || Number.isNaN(Date.parse(from)) || from > new Date().toISOString().slice(0,10)))) return json(400, { error: 'Invalid reset range' });
+      const db = await pool();
+      const client = await db.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(
+          scope === 'all'
+            ? 'DELETE FROM cycle_day_entries WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1)'
+            : 'DELETE FROM cycle_day_entries WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1) AND entry_date >= $2::date',
+          scope === 'all' ? [userId] : [userId, from],
+        );
+        if (scope === 'all') {
+          await client.query('DELETE FROM cycle_profiles WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1)', [userId]);
+        }
+        await client.query('COMMIT');
+        return json(200, { reset: true });
+      } catch (error) { await client.query('ROLLBACK'); throw error; }
+      finally { client.release(); }
+    } catch (error) { console.error('Cycle reset failed', { code: error.code }); return json(503, { error: 'Cycle reset unavailable' }); }
+  }
   if (path.endsWith('/cycle/profile') && ['GET', 'PUT'].includes(method)) {
     try {
       const db = await pool();
