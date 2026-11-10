@@ -24,7 +24,9 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
     try { if (!all) { from = dateKey(parseDate(resetFrom)); if (from > dateKey(new Date())) throw new Error('Choose today or an earlier date.'); } }
     catch { setResetError('Enter a valid date (YYYY-MM-DD) on or before today.'); return; }
     const perform = async () => { setBusy(true); setResetError(''); try { await resetCycleData(from); onClose(); } catch (error) { setResetError(error instanceof Error ? error.message : 'Reset failed'); } finally { setBusy(false); } };
-    Alert.alert('Delete cycle data?', all ? 'Delete all cycle and journal history from this account?' : `Delete cycle and journal entries from ${from} onward?`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => { void perform(); } }]);
+    const question = all ? 'Delete all cycle and journal history from this account?' : `Delete cycle and journal entries from ${from} onward?`;
+    if (Platform.OS === 'web') { if (globalThis.confirm(question)) void perform(); }
+    else Alert.alert('Delete cycle data?', question, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => { void perform(); } }]);
   };
   if (panel === 'insights') return <InsightsContent />;
   if (panel === 'journal') return <JournalContent />;
