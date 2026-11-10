@@ -55,6 +55,6 @@ export default function AccountScreen() {
     <TextInput accessibilityLabel="Username" value={username} onChangeText={setUsername} maxLength={40} autoCapitalize="none" autoCorrect={false} placeholder="Choose a username" placeholderTextColor={theme.colors.placeholder} style={{ color: theme.colors.text, backgroundColor: theme.colors.surface, padding: 14, borderRadius: 12 }} />
     <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ alignSelf: 'flex-start', backgroundColor: theme.colors.roseWash, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 }}><Text style={{ color: theme.colors.text }}>Save changes</Text></Pressable>
     {saving && <ActivityIndicator />}
-    {!!message && <Text accessibilityRole="status" style={{ color: theme.colors.text }}>{message}</Text>}
+    {!!message && <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.text }}>{message}</Text>}
   </ScrollView>;
 }
