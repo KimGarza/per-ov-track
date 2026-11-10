@@ -53,6 +53,7 @@ function useCycleState() {
   }, [commit]);
   const saveDay = useCallback((day: string, kind: CycleKind | null, entry: JournalEntry, confirmed = true, observation?: CycleObservation) => {
     const key = dateKey(parseDate(day));
+    if (kind && key > dateKey(new Date())) return Promise.reject(new Error('Cannot record future menstrual or ovulation dates.'));
     return commit(previous => {
       const next = applyLoggedRange(previous, kind, key, key, dateKey(new Date()), observation);
       if (kind && !confirmed) next.pendingDays = { ...next.pendingDays, [key]: true };
