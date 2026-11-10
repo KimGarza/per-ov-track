@@ -113,7 +113,7 @@ export default function HomeScreen() {
     {journalOpen && <JournalBook onClose={() => setJournalOpen(false)} />}
     {verseOpen && <VersePopup day={today} onClose={() => setVerseOpen(false)} />}
     {editor?.type === 'cycle' && <CycleEditor initialDate={selected} today={today} calendarFirst={editor.calendarFirst} onClose={() => setEditor(null)} onJournal={day => openDay(day)} />}
-    {editor?.type === 'day' && <DayEditor key={editor.day} day={editor.day} initialField={editor.field} onClose={() => setEditor(null)} />}
+    {editor?.type === 'day' && <DayEditor key={editor.day} day={editor.day} predictedKind={predictions[editor.day]} initialField={editor.field} onClose={() => setEditor(null)} />}
   </SafeAreaView>;
 }
 const createStyles = (theme: Theme, width: number, compact: boolean) => {
