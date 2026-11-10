@@ -609,7 +609,7 @@ jobs:
             echo "::error::Database migrations failed; stopping before API routing deployment."
             exit 1
           fi
-          jq -r '.body | fromjson | "Migrations applied: \\(.applied | join(", ")) (total: \\(.total))"' "$RUNNER_TEMP/migrations-response.json"
+          jq -r '.body | fromjson | "Migrations applied: \(.applied | join(", ")) (total: \(.total))"' "$RUNNER_TEMP/migrations-response.json"
 
       - name: Verify private PostgreSQL connection through Lambda
         if: matrix.environment == 'dev'
