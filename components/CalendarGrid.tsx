@@ -101,9 +101,9 @@ export function CalendarLegend({ compact = false }: { compact?: boolean }) {
   const s = useMemo(() => createStyles(theme), [theme]);
   return <><View style={[s.legend, compact && { paddingTop: 4, marginTop: 4, gap: 12 }]}>
     {([['Menstrual', theme.colors.calendarPeriod], ['Ovulation', theme.colors.calendarFertile]] as const).map(([label, color]) => <View key={label} style={s.legendItem}>{label === 'Ovulation' ? <FlowerMarker color={color} size={15} /> : <DropMarker color={color} size={15} />}<Text style={s.legendText}>{label}</Text></View>)}
-    {(['follicular', 'luteal'] as const).map(phase => <View key={phase} style={s.legendItem}><View style={[s.dot, { backgroundColor: phase === 'luteal' ? theme.colors.calendarLuteal : theme.colors.calendarFollicular }]} /><Text style={s.legendText}>{phase === 'luteal' ? 'Luteal' : 'Follicular'} · est.</Text></View>)}
+
     <View style={s.legendItem}>{todayMarker === 'heart' ? <Text style={{ color: theme.colors.todayPeriod, fontSize: 12 }}>♥</Text> : <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.calendarText }} />}<Text style={s.legendText}>Today</Text></View>
-  </View><Text style={[s.legendText, { textAlign: 'center', marginTop: theme.spacing.xs }]}>Phase estimates only · Ovulation is not confirmed</Text></>;
+  </View></>;
 }
 const createStyles = (theme: Theme) => {
   const g = createGlobalStyles(theme);
@@ -119,7 +119,7 @@ const createStyles = (theme: Theme) => {
     cell: { width: '14.2857%', height: theme.calendar.defaultRowHeight, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
     day: { width: '100%', maxWidth: theme.calendar.dayMaxWidth, aspectRatio: 1, borderRadius: theme.radius.pill, alignItems: 'center', justifyContent: 'center' },
     dayText: { color: c.calendarText, fontSize: theme.calendar.dayFontSize, fontFamily: theme.fonts.body },
-    legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: theme.spacing.md, borderTopWidth: 1, borderTopColor: c.border, paddingTop: theme.spacing.md, marginTop: theme.spacing.sm },
+    legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: theme.spacing.sm, borderTopWidth: 1, borderTopColor: c.border, paddingTop: theme.spacing.sm, marginTop: theme.spacing.xs },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     dot: { width: 13, height: 13, borderRadius: theme.radius.pill },
     legendText: { ...g.caption, color: c.text },
