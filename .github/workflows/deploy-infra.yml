@@ -595,11 +595,11 @@ jobs:
           set -euo pipefail
           FUNCTION="crimrhyth-${{ matrix.environment }}-api-handler"
           aws lambda get-function --function-name "$FUNCTION" --region us-east-1 >/dev/null
-          aws lambda invoke \\
-            --function-name "$FUNCTION" \\
-            --region us-east-1 \\
-            --cli-binary-format raw-in-base64-out \\
-            --payload '{"internalOperation":"migrate"}' \\
+          aws lambda invoke \
+            --function-name "$FUNCTION" \
+            --region us-east-1 \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{"internalOperation":"migrate"}' \
             "$RUNNER_TEMP/migrations-response.json" > "$RUNNER_TEMP/migrations-metadata.json"
           if jq -e '.FunctionError != null' "$RUNNER_TEMP/migrations-metadata.json" >/dev/null; then
             echo "::error::Migration Lambda invocation failed."
