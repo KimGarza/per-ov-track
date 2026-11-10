@@ -19,24 +19,44 @@ function useCycleState() {
   const queue = useRef(Promise.resolve());
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    setReady(false);
-    current.current = emptyCycleData();
-    setData(emptyCycleData());
-    setOnboarding(defaultOnboarding());
+  // The effect only starts asynchronous storage work; state is updated after it resolves.
+  // The active flag prevents an old account's load from updating a newly signed-in account.
+  const load = useCallback(async (active: () => boolean = () => true) => {
     if (!authReady || !accountStorageKey || !accountOnboardingKey) return;
-    return Promise.all([AsyncStorage.getItem(accountStorageKey), AsyncStorage.getItem(accountOnboardingKey)]).then(([saved, savedOnboarding]) => {
-    const next = saved ? readCycleData(saved) : emptyCycleData();
-    if (savedOnboarding) setOnboarding({ ...defaultOnboarding(), ...JSON.parse(savedOnboarding) });
-    current.current = next;
-    setData(next);
-    setError(null);
-    setReady(true);
-  }).catch(() => {
-    setError('Your saved data could not be loaded. Please try again.');
-  });
+    try {
+      const [saved, savedOnboarding] = await Promise.all([
+        AsyncStorage.getItem(accountStorageKey),
+        AsyncStorage.getItem(accountOnboardingKey),
+      ]);
+      if (!active()) return;
+      const next = saved ? readCycleData(saved) : emptyCycleData();
+      const answers = savedOnboarding ? { ...defaultOnboarding(), ...JSON.parse(savedOnboarding) } : defaultOnboarding();
+      current.current = next;
+      setData(next);
+      setOnboarding(answers);
+      setError(null);
+      setReady(true);
+    } catch {
+      if (active()) setError('Your saved data could not be loaded. Please try again.');
+    }
   }, [authReady, accountStorageKey, accountOnboardingKey]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    // Defer the initial state reset to the async continuation, avoiding
+    // synchronous setState during the effect's execution.
+    const initialize = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      current.current = emptyCycleData();
+      setData(emptyCycleData());
+      setOnboarding(defaultOnboarding());
+      setError(null);
+      setReady(false);
+      await load(() => active);
+    };
+    void initialize();
+    return () => { active = false; };
+  }, [load]);
   const commit = useCallback((update: (previous: CycleData) => CycleData) => {
     if (!ready || !accountStorageKey) return Promise.reject(new Error('Wait for your account data to load.'));
     const operation = queue.current.then(async () => {
