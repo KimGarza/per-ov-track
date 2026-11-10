@@ -1,4 +1,5 @@
 import { addDays, dateKey, parseDate, type CycleData, type CycleKind } from '@/utils/cycle';
+import { analyzeCycles } from '@/utils/cycleInsights';
 
 export type PregnancyIntent = 'trying' | 'struggling' | 'no' | 'pregnant' | 'unsure';
 export type CycleOnboarding = {
@@ -15,18 +16,19 @@ export function predictedCalendar(data: CycleData, config: CycleOnboarding, toda
   const predictions: Record<string, CycleKind> = {};
   const start = dateKey(new Date(month.getFullYear(), month.getMonth(), 1));
   const end = dateKey(new Date(month.getFullYear(), month.getMonth() + 1, 0));
-  const periodStarts = Object.keys(data.days).filter(key => key <= today && data.days[key] === 'menstrual' && !data.pendingDays?.[key] && data.days[addDays(key, -1)] !== 'menstrual').sort();
-  const anchor = periodStarts.at(-1) ?? config.lastPeriodStart;
+  const insights = analyzeCycles(data, today, config);
+  const anchor = insights.latestStart ?? config.lastPeriodStart;
   if (!anchor && !config.lastOvulation) return {};
-  const cycleLength = Math.max(21, Math.min(45, config.cycleLength || 28));
-  const periodLength = Math.max(1, Math.min(10, config.periodLength || 5));
+  const cycleLength = insights.cycleLength;
+  const periodLength = insights.periodLength;
   const anchors: string[] = [];
   if (anchor) {
     parseDate(anchor);
-    for (let offset = -3; offset <= 3; offset++) anchors.push(addDays(anchor, offset * cycleLength));
+    // Only the latest observed cycle anchors future predictions; do not rewrite historical events.
+    for (let offset = 0; offset <= 3; offset++) anchors.push(addDays(anchor, offset * cycleLength));
   } else if (config.lastOvulation) {
     parseDate(config.lastOvulation);
-    for (let offset = -3; offset <= 3; offset++) anchors.push(addDays(config.lastOvulation, 14 + offset * cycleLength));
+    for (let offset = 0; offset <= 3; offset++) anchors.push(addDays(config.lastOvulation, 14 + offset * cycleLength));
   }
   for (const period of anchors) {
     for (let i = 0; i < periodLength; i++) {
