@@ -89,7 +89,7 @@ export async function handler(event) {
     try {
       const db = await pool();
       const { rows } = await db.query(
-        'SELECT id, email, first_name, last_name, display_name, created_at FROM users WHERE cognito_sub = $1',
+        'SELECT id, email, username, avatar, created_at FROM users WHERE cognito_sub = $1',
         [userId],
       );
       return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
@@ -101,22 +101,15 @@ export async function handler(event) {
   if (method === 'PATCH' && path.endsWith('/users/me')) {
     try {
       const input = JSON.parse(event.body || '{}');
-      const firstName = typeof input.first_name === 'string' ? input.first_name.trim().slice(0, 80) : '';
-      const lastName = typeof input.last_name === 'string' ? input.last_name.trim().slice(0, 80) : '';
-      if (!firstName) return json(400, { error: 'First name is required' });
+      if (typeof input.username !== 'string' || input.username.length > 40 || (input.username && !/^[a-zA-Z0-9_.-]{3,40}$/.test(input.username))) return json(400, { error: 'Username must be 3–40 letters, numbers, dots, underscores or hyphens, or empty.' });
+      if (input.avatar != null && !['flower','dove','heart','cross','sun','leaf'].includes(input.avatar)) return json(400, { error: 'Unknown avatar' });
       const db = await pool();
       const { rows } = await db.query(
-        `UPDATE users SET first_name = $1, last_name = $2,
-          display_name = TRIM(CONCAT($1, ' ', $2)), updated_at = NOW()
-          WHERE cognito_sub = $3 RETURNING id, first_name, last_name, display_name`,
-        [firstName, lastName, userId],
+        'UPDATE users SET username = $1, avatar = COALESCE($2, avatar), updated_at = NOW() WHERE cognito_sub = $3 RETURNING username, avatar, email',
+        [input.username || null, input.avatar ?? null, userId],
       );
-      if (!rows.length) return json(404, { error: 'Account not initialized' });
-      return json(200, { user: rows[0] });
-    } catch (error) {
-      console.error('Account update failed', { name: error.name, code: error.code });
-      return json(503, { error: 'Account update unavailable' });
-    }
+      return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
+    } catch (error) { console.error('Account update failed', { code: error.code }); return json(503, { error: 'Account update unavailable' }); }
   }
   if (path.endsWith('/cycle/profile') && ['GET', 'PUT'].includes(method)) {
     try {
