@@ -87,6 +87,8 @@ function useCycleState() {
   const resetCycleData = useCallback(async (from: string | null) => {
     if (!ready || !session || !api) throw new Error('Account connection is required to reset data.');
     if (from && (dateKey(parseDate(from)) > dateKey(new Date()))) throw new Error('Choose today or an earlier date.');
+    // Serialize with outstanding writes so an older upload cannot restore deleted entries.
+    await queue.current;
     // Delete remotely before touching local records; never re-upload deleted days.
     const response = await fetch(`${api}/cycle/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(from ? { scope: 'from', from } : { scope: 'all' }) });
     if (!response.ok) throw new Error('Could not reset cloud data. Nothing was deleted locally.');
