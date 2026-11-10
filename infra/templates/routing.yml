@@ -16,6 +16,7 @@ Resources:
           - GET
           - POST
           - PATCH
+          - PUT
           - OPTIONS
         AllowHeaders:
           - Content-Type
