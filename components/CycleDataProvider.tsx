@@ -160,7 +160,7 @@ function useCycleState() {
     if (!from) { await AsyncStorage.removeItem(accountOnboardingKey); setOnboarding(defaultOnboarding()); }
     current.current = next;
     setData(next);
-  }, [ready, session, api, accountStorageKey, accountOnboardingKey]);
+  }, [ready, session, api, accountId, accountStorageKey, accountOnboardingKey]);
   return { data, onboarding, syncNow, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
 const CycleContext = createContext<ReturnType<typeof useCycleState> | null>(null);
