@@ -39,3 +39,23 @@
 - Test sign-in with two accounts on the same device.
 - Test saving offline, reconnecting, deleting on another device, and full/date-scoped resets after the revisioned sync protocol is built.
 - Test prediction recomputation after confirmed history changes; ensure older observations remain intact.
+
+## Offline-first sync implementation (PR #59)
+- Account-scoped AsyncStorage holds cycle history, a durable pending mutation queue, server revision and reset generation.
+- Local edits are saved immediately; a short debounce, foreground interval and app-resume trigger cloud reconciliation.
+- `GET /cycle/sync` downloads changes after the stored cursor. `POST /cycle/sync` uses idempotent mutation IDs and optimistic revisions.
+- Server tombstones retain deletion metadata but erase sensitive entry contents. Full/partial resets increment generation, invalidating old offline writes.
+- An older app's legacy PUT endpoint is rejected after a reset to avoid restoring deleted records.
+- The current conflict policy **rejects simultaneous edits to the same day** and preserves the pending local mutation; no automatic field-level merge or conflict-review UI is implemented.
+- Account preferences: theme is cached per Cognito subject and synchronized with `/users/me/preferences`. Username is server validated; avatar is stored with the account.
+- The optional six-digit app PIN uses native SecureStore and gates the UI on launch/background. **It does not encrypt cycle data in AsyncStorage.** Strong at-rest encryption and secure recovery are future security requirements.
+- App PIN is optional and does not replace Cognito authentication.
+- Apple sign-in uses a recognizable brand logo image; image retrieval requires connectivity, which sign-in already requires.
+- Calendar swiping uses native gesture handling rather than parent touch start/end heuristics.
+
+## Validation required before merge
+- GitHub Actions lint, TypeScript, unit tests.
+- Test new-account sync, older-account migration, airplane-mode edits, multiple devices, account switching, conflict rejection, and resets on dev RDS.
+- Verify migration 004 and 005 against a disposable database. Do not merge if schema migration fails.
+- Verify Android/iOS gestures, PIN behavior, and icon loading.
+- Server sync pagination currently uses a revision cursor; bulk resets that stamp many rows with one revision need composite pagination before production-scale rollout.
