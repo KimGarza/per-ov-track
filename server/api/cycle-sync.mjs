@@ -13,11 +13,12 @@ export async function handleCycleSync(db, userSub, method, body) {
     const state = stateResult.rows[0];
     if (method === 'GET') {
       const since = Number(body.since ?? 0);
+      const after = typeof body.after === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(body.after) ? body.after : '0001-01-01';
       if (!Number.isSafeInteger(since) || since < 0) { await client.query('ROLLBACK'); return response(400, { error: 'Invalid cursor' }); }
       const result = await client.query(`SELECT to_char(entry_date,'YYYY-MM-DD') AS entry_date,kind,confirmed,flow,cervical_mucus,mood,symptoms,notes,diary,diary_style,reflection,deleted_at,sync_revision
         FROM cycle_day_entries WHERE user_id=$1 AND sync_revision>$2 ORDER BY sync_revision,entry_date LIMIT 251`, [userId, since]);
       await client.query('COMMIT');
-      return response(200, { generation: Number(state.generation), resetFrom: state.reset_from, revision: Number(state.revision), entries: result.rows.slice(0,250).map(row), nextCursor: result.rows.length > 250 ? Number(result.rows[249].sync_revision) : null });
+      return response(200, { generation: Number(state.generation), resetFrom: state.reset_from, revision: Number(state.revision), entries: result.rows.slice(0,250).map(row), nextCursor: result.rows.length > 250 ? { revision: Number(result.rows[249].sync_revision), date: result.rows[249].entry_date } : null });
     }
     if (method !== 'POST') { await client.query('ROLLBACK'); return response(405, { error: 'Method not allowed' }); }
     const { mutationId, generation, baseRevision, entry } = body;
