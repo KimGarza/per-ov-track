@@ -3,13 +3,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { panelTitles, type PrimaryPanel } from '@/components/PrimaryPanels';
 import { IllustrationPlaceholder } from '@/components/IllustrationPlaceholder';
 import { MenuButton, usePrimaryPanel } from '@/components/SideMenu';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text } from '@/components/Themed';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FaithBackdrop, ThemeFloralAccent } from '@/components/FaithBackdrop';
 import { DailyVerseReference, VerseIconButton, VersePopup } from '@/components/DailyVerse';
 import { DecorativeFrame, OrnamentalDivider, TitleFlourish } from '@/components/DecorativeFrame';
+import { CalendarSwipeArea } from '@/components/CalendarSwipeArea';
 import { CalendarGrid, CalendarLegend, MonthNavigation } from '@/components/CalendarGrid';
 import { CycleOnboardingModal } from '@/components/CycleOnboardingModal';
 import { predictedCalendar } from '@/utils/onboarding';
@@ -48,7 +49,6 @@ export default function HomeScreen() {
   const predictions = useMemo(() => ({ ...predictedCalendar(data, onboarding, today, month), ...predictedCalendar(data, onboarding, today, new Date(month.getFullYear(), month.getMonth() + 1, 1)) }), [data, onboarding, today, month]);
   const [editor, setEditor] = useState<Editor>(null);
   const [jumpOpen, setJumpOpen] = useState(false);
-  const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const rows = Math.ceil((month.getDay() + new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()) / 7);
   const reserveCheckin = viewport.height >= 560 ? theme.calendar.checkinHeight : viewport.height >= 480 ? 72 : 0;
   const calendarHeight = Math.min(viewport.height * 0.7, viewport.height - theme.calendar.headerHeight - reserveCheckin - theme.spacing.md);
@@ -73,22 +73,8 @@ export default function HomeScreen() {
         <Text accessibilityLiveRegion="polite" style={g.body}>{error ?? 'Loading your calendar…'}</Text>
         {error && <Pressable accessibilityRole="button" onPress={() => { void retry(); }} style={g.button}><Text style={g.buttonText}>Try again</Text></Pressable>}
       </View> : <>
-        <View style={[g.card, s.calendar]} onTouchStart={event => { swipeStart.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }; }}
-          onMoveShouldSetResponderCapture={event => {
-            if (!swipeStart.current) return false;
-            const dx = event.nativeEvent.pageX - swipeStart.current.x;
-            const dy = event.nativeEvent.pageY - swipeStart.current.y;
-            return Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy) * 1.7;
-          }}
-          onResponderRelease={event => {
-            if (!swipeStart.current) return;
-            const dx = event.nativeEvent.pageX - swipeStart.current.x;
-            const dy = event.nativeEvent.pageY - swipeStart.current.y;
-            swipeStart.current = null;
-            if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-            changeMonth(new Date(month.getFullYear(), month.getMonth() + (dx > 0 ? -1 : 1), 1));
-          }}
-          onResponderTerminate={() => { swipeStart.current = null; }}>
+        <CalendarSwipeArea onPrevious={() => changeMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} onNext={() => changeMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>
+          <View style={[g.card, s.calendar]}>
           <ThemeFloralAccent />
           <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setJumpOpen(true)} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
           <Pressable accessibilityRole="button" accessibilityLabel="Return to current month" onPress={() => changeMonth(parseDate(today))} style={{ alignSelf: 'center', padding: 4 }}><Text style={{ color: theme.colors.muted, fontSize: 12 }}>↺ Today</Text></Pressable>
@@ -96,7 +82,8 @@ export default function HomeScreen() {
           {syncStatus !== 'saved' && <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: theme.colors.muted, fontSize: 11 }}>{syncStatus === 'syncing' ? 'Syncing your changes…' : 'Saved on this device · Waiting to sync'}</Text>}
           <OrnamentalDivider />
           <CalendarLegend compact />
-        </View>
+          </View>
+        </CalendarSwipeArea>
         <Pressable accessibilityRole="button" accessibilityLabel="Read today’s verse" onPress={() => setVerseOpen(true)} style={[g.card, { marginTop: theme.spacing.md, gap: theme.spacing.sm }]}><DecorativeFrame variant="verse" />
           <Text style={[g.heading, { fontSize: 26 }]}>✝ Today’s verse <TitleFlourish /></Text>
           <Text style={[g.body, { fontFamily: theme.fonts.heading, fontSize: 22, lineHeight: 28 }]}>{dailyVerse(today).text}</Text>
