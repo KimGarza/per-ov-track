@@ -1,3 +1,4 @@
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Stack, DefaultTheme, ThemeProvider } from 'expo-router';
@@ -46,7 +47,7 @@ export default function RootLayout() {
     return null;
   }
 
-  return <AppThemeProvider><AuthProvider><AccountPreferencesSync /><CycleDataProvider><RootLayoutNav /></CycleDataProvider></AuthProvider></AppThemeProvider>;
+  return <GestureHandlerRootView style={{ flex: 1 }}><AppThemeProvider><AuthProvider><AccountPreferencesSync /><CycleDataProvider><RootLayoutNav /></CycleDataProvider></AuthProvider></AppThemeProvider></GestureHandlerRootView>;
 }
 
 function RootLayoutNav() {
