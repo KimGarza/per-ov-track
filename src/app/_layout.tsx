@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack, DefaultTheme, ThemeProvider } from 'expo-router';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { ActivityIndicator, View } from 'react-native';
+import { AccountPreferencesSync } from '@/components/AccountPreferencesSync';
 import { CycleDataProvider } from '@/components/CycleDataProvider';
 import { AppThemeProvider, useAppTheme } from '@/components/ThemeProvider';
 import * as SplashScreen from 'expo-splash-screen';
@@ -45,7 +46,7 @@ export default function RootLayout() {
     return null;
   }
 
-  return <AppThemeProvider><AuthProvider><CycleDataProvider><RootLayoutNav /></CycleDataProvider></AuthProvider></AppThemeProvider>;
+  return <AppThemeProvider><AuthProvider><AccountPreferencesSync /><CycleDataProvider><RootLayoutNav /></CycleDataProvider></AuthProvider></AppThemeProvider>;
 }
 
 function RootLayoutNav() {
