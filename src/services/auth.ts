@@ -62,7 +62,14 @@ export async function refreshSession(session: Session): Promise<Session | null> 
     const next = toSession(refreshed, session);
     await saveSession(next);
     return next;
-  } catch { await saveSession(null); return null; }
+  } catch (error) {
+    // Network outages should not force an already-authenticated user to sign in again.
+    // Expired tokens are never accepted by the server; this only preserves cached access.
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    if (/network|fetch|offline|timeout|connection/.test(message)) return session;
+    await saveSession(null);
+    return null;
+  }
 }
 
 export async function revokeSession(session: Session | null) {

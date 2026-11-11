@@ -531,7 +531,7 @@ jobs:
             KEY="lambda/api-${GITHUB_SHA}.zip"
             npm install --prefix server/api --omit=dev --no-audit --no-fund
             curl --fail --silent --show-error --location https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem --output server/api/rds-ca.pem
-            (cd server/api && zip -qr "$RUNNER_TEMP/crimson-api.zip" index.mjs migrate.mjs migrations rds-ca.pem node_modules)
+            (cd server/api && zip -qr "$RUNNER_TEMP/crimson-api.zip" index.mjs migrate.mjs cycle-sync.mjs migrations rds-ca.pem node_modules)
             aws s3 cp "$RUNNER_TEMP/crimson-api.zip" "s3://$BUCKET/$KEY" --only-show-errors
           fi
           echo "key=$KEY" >> "$GITHUB_OUTPUT"
