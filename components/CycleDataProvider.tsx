@@ -198,7 +198,7 @@ function useCycleState() {
       reflections: filter(current.current.reflections),
     } : emptyCycleData();
     await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
-    if (!from) { await AsyncStorage.removeItem(accountOnboardingKey); setOnboarding(defaultOnboarding()); }
+    if (!from) { await AsyncStorage.removeItem(accountOnboardingKey); await AsyncStorage.removeItem(`${accountOnboardingKey}:pending`); setOnboarding(defaultOnboarding()); }
     current.current = next;
     setData(next);
   }, [ready, session, api, accountId, accountStorageKey, accountOnboardingKey]);
