@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { emptyCycleData } from '@/utils/cycle';
 import type { CycleData } from '@/utils/cycle';
 export type SyncMutation = { mutationId: string; generation: number; baseRevision: number; entry: SyncEntry };
 export type SyncEntry = { date: string; kind?: string | null; confirmed?: boolean; flow?: string; mucus?: string; mood?: string; symptoms?: string; notes?: string; diary?: string; diaryStyle?: unknown; reflection?: unknown; deleted?: boolean; revision?: number };
@@ -70,6 +71,12 @@ export async function syncAccount(api: string, token: string, sub: string, data:
     if (state.generation !== serverGeneration) {
       // Server reset wins. Do not replay stale pending edits.
       state = { ...state, generation: serverGeneration, pending: [] };
+      if (!body.resetFrom) next = emptyCycleData();
+      else {
+        const cutoff: string = body.resetFrom;
+        const keep = <T,>(map?: Record<string,T>) => Object.fromEntries(Object.entries(map ?? {}).filter(([day]) => day < cutoff)) as Record<string,T>;
+        next = { ...next, days: keep(next.days), journal: keep(next.journal), observations: keep(next.observations), pendingDays: keep(next.pendingDays), diary: keep(next.diary), diaryStyles: keep(next.diaryStyles), reflections: keep(next.reflections) };
+      }
     }
     const dirtyDates = new Set(state.pending.map(m => m.entry.date));
     for (const entry of body.entries as SyncEntry[]) if (!dirtyDates.has(entry.date)) next = applyRemote(next, entry);
