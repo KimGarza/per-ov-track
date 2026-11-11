@@ -13,6 +13,7 @@ export default function AccountScreen() {
   const { profile, session } = useAuth();
   const { theme } = useAppTheme();
   const [username, setUsername] = useState('');
+  const [savedUsername, setSavedUsername] = useState('');
   const [avatar, setAvatar] = useState<Avatar>('flower');
   const [chooser, setChooser] = useState(false);
   const [message, setMessage] = useState('');
@@ -23,7 +24,7 @@ export default function AccountScreen() {
     let active = true;
     fetch(`${base}/users/me`, { headers: { Authorization: `Bearer ${session.idToken}` } })
       .then(async r => r.ok ? (await r.json() as { user: { username?: string | null; avatar?: Avatar } }).user : null)
-      .then(user => { if (active && user) { setUsername(user.username ?? ''); setAvatar(user.avatar ?? 'flower'); } })
+      .then(user => { if (active && user) { setUsername(user.username ?? ''); setSavedUsername(user.username ?? ''); setAvatar(user.avatar ?? 'flower'); } })
       .catch(() => { if (active) setMessage('Account details could not be loaded.'); });
     return () => { active = false; };
   }, [session, base]);
@@ -37,7 +38,7 @@ export default function AccountScreen() {
         body: JSON.stringify({ username: username.trim(), avatar: nextAvatar }),
       });
       if (!response.ok) throw new Error(response.status === 409 ? 'Username is already taken.' : 'Could not save account changes.');
-      setAvatar(nextAvatar); setMessage('Changes saved');
+      setAvatar(nextAvatar); setSavedUsername(username.trim()); setMessage('Changes saved');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Unable to save'); }
     finally { setSaving(false); }
   }
@@ -53,7 +54,7 @@ export default function AccountScreen() {
     </View>}
     <Text style={{ color: theme.colors.text }}>Username (optional)</Text>
     <TextInput accessibilityLabel="Username" value={username} onChangeText={setUsername} maxLength={40} autoCapitalize="none" autoCorrect={false} placeholder="Choose a username" placeholderTextColor={theme.colors.placeholder} style={{ color: theme.colors.text, backgroundColor: theme.colors.surface, padding: 14, borderRadius: 12 }} />
-    <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ alignSelf: 'flex-start', backgroundColor: theme.colors.roseWash, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 }}><Text style={{ color: theme.colors.text }}>Save changes</Text></Pressable>
+    {username.trim() !== savedUsername && <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ alignSelf: 'flex-start', backgroundColor: theme.colors.roseWash, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 }}><Text style={{ color: theme.colors.text }}>Save username</Text></Pressable>}
     {saving && <ActivityIndicator />}
     {!!message && <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.text }}>{message}</Text>}
   </ScrollView>;
