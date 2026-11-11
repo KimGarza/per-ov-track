@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack, DefaultTheme, ThemeProvider } from 'expo-router';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { ActivityIndicator, View } from 'react-native';
+import { OfflinePinProvider } from '@/components/OfflinePinProvider';
 import { AccountPreferencesSync } from '@/components/AccountPreferencesSync';
 import { CycleDataProvider } from '@/components/CycleDataProvider';
 import { AppThemeProvider, useAppTheme } from '@/components/ThemeProvider';
@@ -47,7 +48,7 @@ export default function RootLayout() {
     return null;
   }
 
-  return <GestureHandlerRootView style={{ flex: 1 }}><AppThemeProvider><AuthProvider><AccountPreferencesSync /><CycleDataProvider><RootLayoutNav /></CycleDataProvider></AuthProvider></AppThemeProvider></GestureHandlerRootView>;
+  return <GestureHandlerRootView style={{ flex: 1 }}><AppThemeProvider><AuthProvider><AccountPreferencesSync /><OfflinePinProvider><CycleDataProvider><RootLayoutNav /></CycleDataProvider></OfflinePinProvider></AuthProvider></AppThemeProvider></GestureHandlerRootView>;
 }
 
 function RootLayoutNav() {
