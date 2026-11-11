@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { applyLoggedRange, dateKey, emptyCycleData, parseDate, readCycleData, type CycleObservation, type DiaryStyle, type CycleData, type CycleKind, type JournalEntry, type ReflectionEntry } from '@/utils/cycle';
 
@@ -139,6 +140,16 @@ function useCycleState() {
     const timer = setTimeout(() => { void syncNow().catch(() => {}); }, 1500);
     return () => clearTimeout(timer);
   }, [ready, accountId, data, syncNow]);
+  useEffect(() => {
+    if (!ready || !accountId) return;
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') void syncNow().catch(() => {});
+    });
+    const interval = setInterval(() => {
+      if (AppState.currentState === 'active') void syncNow().catch(() => {});
+    }, 60_000);
+    return () => { subscription.remove(); clearInterval(interval); };
+  }, [ready, accountId, syncNow]);
   const resetCycleData = useCallback(async (from: string | null) => {
     if (!ready || !session || !api || !accountStorageKey || !accountOnboardingKey) throw new Error('Account connection is required to reset data.');
     if (from && (dateKey(parseDate(from)) > dateKey(new Date()))) throw new Error('Choose today or an earlier date.');
