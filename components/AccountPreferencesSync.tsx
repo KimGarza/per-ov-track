@@ -10,6 +10,7 @@ export function AccountPreferencesSync() {
   const { name, setName } = useAppTheme();
   const hydrated = useRef<string | null>(null);
   const previous = useRef(name);
+  const initialized = useRef(false);
   const api = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
   const account = profile?.sub;
   useEffect(() => {
@@ -24,8 +25,12 @@ export function AccountPreferencesSync() {
         if (active && remote && remote in themes) {
           const local = await AsyncStorage.getItem('crimson-rhythm:theme:v1');
           if (active && !local) setName(remote);
+          else if (active && local && local !== remote) {
+            // Prefer the explicit local selection and persist it to the account.
+            await fetch(`${api}/users/me/preferences`, { method: 'PUT', headers: { Authorization: `Bearer ${session.idToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: local }) });
+          }
         }
-        if (active) hydrated.current = account;
+        if (active) { hydrated.current = account; initialized.current = true; }
       } catch { /* Retain the locally selected theme when offline. */ }
     };
     void run();
