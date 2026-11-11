@@ -38,7 +38,7 @@ export function applyRemote(data: CycleData, entry: SyncEntry): CycleData {
     observations: { ...data.observations }, pendingDays: { ...data.pendingDays },
     diary: { ...data.diary }, diaryStyles: { ...data.diaryStyles }, reflections: { ...data.reflections } };
   const date = entry.date;
-  for (const field of ['days','journal','observations','pendingDays','diary','diaryStyles','reflections'] as const) delete next[field][date] as never;
+  for (const field of ['days','journal','observations','pendingDays','diary','diaryStyles','reflections'] as const) delete (next[field] as Record<string, unknown>)[date];
   if (!entry.deleted) {
     if (entry.kind === 'menstrual' || entry.kind === 'ovulation') next.days[date] = entry.kind;
     if (entry.kind && entry.confirmed === false) next.pendingDays[date] = true;
@@ -46,8 +46,8 @@ export function applyRemote(data: CycleData, entry: SyncEntry): CycleData {
     if (entry.kind === 'ovulation' && entry.mucus) next.observations[date] = { kind: 'ovulation', mucus: entry.mucus as 'dry' };
     if (entry.mood != null || entry.symptoms != null || entry.notes != null) next.journal[date] = { mood: entry.mood ?? '', symptoms: entry.symptoms ?? '', notes: entry.notes ?? '' };
     if (entry.diary != null) next.diary[date] = entry.diary;
-    if (entry.diaryStyle != null) next.diaryStyles[date] = entry.diaryStyle as CycleData['diaryStyles'] extends Record<string, infer T> ? T : never;
-    if (entry.reflection != null) next.reflections[date] = entry.reflection as CycleData['reflections'] extends Record<string, infer T> ? T : never;
+    if (entry.diaryStyle != null) next.diaryStyles[date] = entry.diaryStyle as NonNullable<CycleData['diaryStyles']>[string];
+    if (entry.reflection != null) next.reflections[date] = entry.reflection as NonNullable<CycleData['reflections']>[string];
   }
   return next;
 }
@@ -78,7 +78,7 @@ export async function syncAccount(api: string, token: string, sub: string, data:
     cursor = body.nextCursor;
     if (page === 99) throw new Error('Sync pagination limit reached');
   }
-  await persist(next);
+  if (JSON.stringify(next) !== JSON.stringify(data)) await persist(next);
   state.revision = serverRevision;
   state.generation = serverGeneration;
   await saveSyncState(sub, state);
