@@ -14,7 +14,8 @@ export async function applyMigrations(pool) {
       filename TEXT PRIMARY KEY, checksum TEXT NOT NULL,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
-    const files = readdirSync(directory).filter(name => /^\\d{3}_[a-z0-9_]+\\.sql$/.test(name)).sort();
+    const files = readdirSync(directory).filter(name => /^\d{3}_[a-z0-9_]+\.sql$/.test(name)).sort();
+    if (!files.length) throw new Error('No numbered SQL migration files found in Lambda package');
     for (const filename of files) {
       const sql = readFileSync(join(directory, filename), 'utf8');
       const checksum = createHash('sha256').update(sql).digest('hex');

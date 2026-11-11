@@ -603,10 +603,13 @@ jobs:
             "$RUNNER_TEMP/migrations-response.json" > "$RUNNER_TEMP/migrations-metadata.json"
           if jq -e '.FunctionError != null' "$RUNNER_TEMP/migrations-metadata.json" >/dev/null; then
             echo "::error::Migration Lambda invocation failed."
+            jq -r 'if .errorType then "Lambda error type: \(.errorType)" else "Lambda returned an execution error" end' "$RUNNER_TEMP/migrations-response.json" || true
+            jq -r 'if .errorMessage then "Lambda error: \(.errorMessage | split("\\n")[0] | .[0:240])" else empty end' "$RUNNER_TEMP/migrations-response.json" || true
             exit 1
           fi
           if ! jq -e '.statusCode == 200' "$RUNNER_TEMP/migrations-response.json" >/dev/null; then
             echo "::error::Database migrations failed; stopping before API routing deployment."
+            jq -r '.body | fromjson? | .error // "See CloudWatch for the migration error"' "$RUNNER_TEMP/migrations-response.json" || true
             exit 1
           fi
           jq -r '.body | fromjson | "Migrations applied: \(.applied | join(", ")) (total: \(.total))"' "$RUNNER_TEMP/migrations-response.json"
