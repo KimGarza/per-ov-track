@@ -4,9 +4,11 @@ import { applyLoggedRange, dateKey, emptyCycleData, parseDate, readCycleData, ty
 
 import { useAuth } from '@/src/providers/AuthProvider';
 import { defaultOnboarding, type CycleOnboarding } from '@/utils/onboarding';
+import { changedDates, entryForDay, loadSyncState, saveSyncState, syncAccount } from '@/src/services/cycleSync';
 
 const onboardingKey = 'crimson-rhythm:cycle-onboarding:v1';
 const storageKey = 'crimson-rhythm:cycle-data:v1';
+const createMutationId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => { const n = Math.floor(Math.random() * 16); return (char === 'x' ? n : (n & 3 | 8)).toString(16); });
 function useCycleState() {
   const { session, ready: authReady, profile } = useAuth();
   const accountId = session?.idToken && profile?.sub ? profile.sub : null;
@@ -60,22 +62,26 @@ function useCycleState() {
   const commit = useCallback((update: (previous: CycleData) => CycleData) => {
     if (!ready || !accountStorageKey) return Promise.reject(new Error('Wait for your account data to load.'));
     const operation = queue.current.then(async () => {
-      const next = update(current.current);
+      const previousSnapshot = current.current;
+      const next = update(previousSnapshot);
       await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
       current.current = next;
       setData(next);
-      if (session && api) {
-        const keys = new Set([...Object.keys(next.days), ...Object.keys(next.journal), ...Object.keys(next.diary ?? {}), ...Object.keys(next.reflections ?? {})]);
-        try { for (const day of keys) {
-          const payload = { date: day, kind: next.days[day] ?? null, confirmed: !next.pendingDays?.[day], flow: next.observations?.[day]?.kind === 'menstrual' ? next.observations[day].flow : undefined, mucus: next.observations?.[day]?.kind === 'ovulation' ? next.observations[day].mucus : undefined, ...next.journal[day], diary: next.diary?.[day], diaryStyle: next.diaryStyles?.[day], reflection: next.reflections?.[day] };
-          const response = await fetch(`${api}/cycle/days`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(payload) });
-          if (!response.ok) { console.warn('Cycle cloud sync unavailable', response.status); break; }
-        } } catch { console.warn('Cycle cloud sync unavailable'); }
+      if (accountId) {
+        const state = await loadSyncState(accountId);
+        const changed = changedDates(previousSnapshot, next);
+        for (const date of changed) {
+          const entry = entryForDay(next, date);
+          state.pending = state.pending.filter(item => item.entry.date !== date);
+          state.pending.push({ mutationId: createMutationId(), generation: state.generation, baseRevision: state.revision, entry });
+        }
+        await saveSyncState(accountId, state);
       }
+
     });
     queue.current = operation.catch(() => {});
     return operation;
-  }, [ready, session, api, accountStorageKey]);
+  }, [ready, accountId, accountStorageKey]);
   const saveRange = useCallback((kind: CycleKind | null, start: string, end: string, observation?: CycleObservation) => {
     if (kind && (start > dateKey(new Date()) || end > dateKey(new Date()))) return Promise.reject(new Error('Cannot record future menstrual or ovulation dates.'));
     return commit(previous => applyLoggedRange(previous, kind, start, end, dateKey(new Date()), observation));
@@ -118,6 +124,21 @@ function useCycleState() {
     }
     setOnboarding(answers);
   }, [commit, session, api, accountOnboardingKey]);
+  const syncNow = useCallback(async () => {
+    if (!accountId || !session || !api || !accountStorageKey || !ready) return;
+    await queue.current;
+    const result = await syncAccount(api, session.idToken, accountId, current.current, async next => {
+      await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
+      current.current = next;
+      setData(next);
+    });
+    return result;
+  }, [accountId, session, api, accountStorageKey, ready]);
+  useEffect(() => {
+    if (!ready || !accountId) return;
+    const timer = setTimeout(() => { void syncNow().catch(() => {}); }, 1500);
+    return () => clearTimeout(timer);
+  }, [ready, accountId, data, syncNow]);
   const resetCycleData = useCallback(async (from: string | null) => {
     if (!ready || !session || !api || !accountStorageKey || !accountOnboardingKey) throw new Error('Account connection is required to reset data.');
     if (from && (dateKey(parseDate(from)) > dateKey(new Date()))) throw new Error('Choose today or an earlier date.');
@@ -126,6 +147,8 @@ function useCycleState() {
     // Delete remotely before touching local records; never re-upload deleted days.
     const response = await fetch(`${api}/cycle/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(from ? { scope: 'from', from } : { scope: 'all' }) });
     if (!response.ok) throw new Error('Could not reset cloud data. Nothing was deleted locally.');
+    const responseBody = await response.json();
+    await saveSyncState(accountId!, { generation: responseBody.generation, revision: responseBody.revision, pending: [], dirty: false });
     const filter = <T,>(values?: Record<string, T>) => Object.fromEntries(Object.entries(values ?? {}).filter(([day]) => from && day < from)) as Record<string, T>;
     const next: CycleData = from ? {
       ...current.current, days: filter(current.current.days), journal: filter(current.current.journal),
@@ -138,7 +161,7 @@ function useCycleState() {
     current.current = next;
     setData(next);
   }, [ready, session, api, accountStorageKey, accountOnboardingKey]);
-  return { data, onboarding, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
+  return { data, onboarding, syncNow, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
 const CycleContext = createContext<ReturnType<typeof useCycleState> | null>(null);
 export function CycleDataProvider({ children }: PropsWithChildren) {
