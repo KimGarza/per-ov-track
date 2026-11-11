@@ -40,10 +40,25 @@ function useCycleState() {
       setOnboarding(answers);
       setError(null);
       setReady(true);
+      if (session && api && !answers.completed) {
+        try {
+          const response = await fetch(`${api}/cycle/profile`, { headers: { Authorization: `Bearer ${session.idToken}` } });
+          if (response.ok && active()) {
+            const remote = (await response.json()).profile;
+            if (remote?.onboarding_completed_at && active()) {
+              const restored = { completed: true, lastPeriodStart: remote.last_period_start?.slice(0,10) ?? undefined,
+                lastOvulation: remote.last_ovulation_date?.slice(0,10) ?? undefined, pregnancyIntent: remote.pregnancy_intent ?? undefined,
+                cycleLength: remote.cycle_length_days ?? 28, periodLength: remote.period_length_days ?? 5 };
+              await AsyncStorage.setItem(accountOnboardingKey, JSON.stringify(restored));
+              if (active()) setOnboarding(restored);
+            }
+          }
+        } catch { /* Local tracking remains available without connectivity. */ }
+      }
     } catch {
       if (active()) setError('Your saved data could not be loaded. Please try again.');
     }
-  }, [authReady, accountStorageKey, accountOnboardingKey]);
+  }, [authReady, accountStorageKey, accountOnboardingKey, session, api]);
   useEffect(() => {
     let active = true;
     // Defer the initial state reset to the async continuation, avoiding
