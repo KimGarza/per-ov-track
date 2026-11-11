@@ -124,15 +124,15 @@ function useCycleState() {
     }
     setOnboarding(answers);
   }, [commit, session, api, accountOnboardingKey]);
-  const syncNow = useCallback(async () => {
-    if (!accountId || !session || !api || !accountStorageKey || !ready) return;
-    await queue.current;
-    const result = await syncAccount(api, session.idToken, accountId, current.current, async next => {
+  const syncNow = useCallback(() => {
+    if (!accountId || !session || !api || !accountStorageKey || !ready) return Promise.resolve();
+    const operation = queue.current.then(() => syncAccount(api, session.idToken, accountId, current.current, async next => {
       await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
       current.current = next;
       setData(next);
-    });
-    return result;
+    }));
+    queue.current = operation.then(() => {}, () => {});
+    return operation.then(() => {});
   }, [accountId, session, api, accountStorageKey, ready]);
   useEffect(() => {
     if (!ready || !accountId) return;
