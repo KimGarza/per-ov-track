@@ -22,9 +22,9 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
   const [showCycles, setShowCycles] = useState(false);
   const [resetError, setResetError] = useState('');
   const [busy, setBusy] = useState(false);
-  const confirmReset = (all: boolean) => {
+  const confirmReset = (all: boolean, cycleOverride?: string) => {
     let from: string | null = null;
-    try { if (!all) { from = selectedCycle ?? currentCycleStart; if (!from || from > dateKey(new Date())) throw new Error('No cycle available'); } }
+    try { if (!all) { from = cycleOverride ?? selectedCycle ?? currentCycleStart; if (!from || from > dateKey(new Date())) throw new Error('No cycle available'); } }
     catch { setResetError('Record a period first to choose a cycle to reset.'); return; }
     const perform = async () => { setBusy(true); setResetError(''); try { await resetCycleData(from); onClose(); } catch (error) { setResetError(error instanceof Error ? error.message : 'Reset failed'); } finally { setBusy(false); } };
     const question = all ? 'Delete all cycle and journal history from this account?' : `Delete cycle and journal entries from ${from} onward?`;
@@ -42,7 +42,7 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
     <Text style={g.body}>Estimated next cycle: {insights.latestStart ? dateKey(new Date(parseDate(insights.latestStart).getFullYear(), parseDate(insights.latestStart).getMonth(), parseDate(insights.latestStart).getDate() + insights.cycleLength)) : 'Add a period to begin tracking'}</Text>
     <Text style={g.sectionHeading}>Reset cycle data</Text>
     <Text style={g.caption}>Resets follow your recorded menstrual cycles, not calendar months. A cycle can span two months.</Text>
-    {currentCycleStart && <Pressable accessibilityRole="button" disabled={busy} onPress={() => { setSelectedCycle(currentCycleStart); confirmReset(false); }} style={[g.outlineButton, { alignSelf: 'flex-start', paddingHorizontal: 18 }]}>
+    {currentCycleStart && <Pressable accessibilityRole="button" disabled={busy} onPress={() => { setSelectedCycle(currentCycleStart); confirmReset(false, currentCycleStart); }} style={[g.outlineButton, { alignSelf: 'flex-start', paddingHorizontal: 18 }]}>
       <Text style={g.label}>Reset this cycle</Text>
     </Pressable>}
     <Pressable accessibilityRole="button" disabled={busy || !cycleStarts.length} onPress={() => setShowCycles(value => !value)} style={[g.outlineButton, { alignSelf: 'flex-start', paddingHorizontal: 18 }]}>
