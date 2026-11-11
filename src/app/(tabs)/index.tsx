@@ -34,7 +34,7 @@ export default function HomeScreen() {
       router.setParams({ panel: undefined });
     }
   }, [panel, openPanel]);
-  const { data, ready, error, retry, onboarding, saveOnboarding } = useCycleData();
+  const { data, ready, error, retry, onboarding, saveOnboarding, syncStatus } = useCycleData();
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [viewport, setViewport] = useState({ width: window.width, height: window.height - insets.top - insets.bottom });
@@ -93,6 +93,7 @@ export default function HomeScreen() {
           <MonthNavigation compact month={month} onChange={changeMonth} onTitlePress={() => setJumpOpen(true)} onUpdate={() => setEditor({ type: 'cycle', calendarFirst: false })} cycleLabel={currentCycleDay ? `Cycle day ${currentCycleDay}` : 'Your cycle'} />
           <Pressable accessibilityRole="button" accessibilityLabel="Return to current month" onPress={() => changeMonth(parseDate(today))} style={{ alignSelf: 'center', padding: 4 }}><Text style={{ color: theme.colors.muted, fontSize: 12 }}>↺ Today</Text></Pressable>
           <CalendarGrid month={month} today={today} days={data.days} predictedDays={predictions} pendingDays={data.pendingDays} phaseDays={Object.keys(data.days).length ? undefined : {}} selected={selected} rowHeight={rowHeight} onSelect={day => openDay(day)} />
+          {syncStatus !== 'saved' && <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: theme.colors.muted, fontSize: 11 }}>{syncStatus === 'syncing' ? 'Syncing your changes…' : 'Saved on this device · Waiting to sync'}</Text>}
           <OrnamentalDivider />
           <CalendarLegend compact />
         </View>
