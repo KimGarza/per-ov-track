@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useAuth } from '@/src/providers/AuthProvider';
+import { useOfflinePin } from '@/components/OfflinePinProvider';
 import { useAppTheme } from '@/components/ThemeProvider';
 
 export const avatarChoices = [
@@ -12,6 +13,9 @@ type Avatar = typeof avatarChoices[number]['id'];
 export default function AccountScreen() {
   const { profile, session } = useAuth();
   const { theme } = useAppTheme();
+  const { enabled: pinEnabled, enable: enablePin, disable: disablePin } = useOfflinePin();
+  const [editPin, setEditPin] = useState(false);
+  const [pin, setPin] = useState('');
   const [username, setUsername] = useState('');
   const [savedUsername, setSavedUsername] = useState('');
   const [avatar, setAvatar] = useState<Avatar>('flower');
@@ -55,6 +59,8 @@ export default function AccountScreen() {
     <Text style={{ color: theme.colors.text }}>Username (optional)</Text>
     <TextInput accessibilityLabel="Username" value={username} onChangeText={setUsername} maxLength={40} autoCapitalize="none" autoCorrect={false} placeholder="Choose a username" placeholderTextColor={theme.colors.placeholder} style={{ color: theme.colors.text, backgroundColor: theme.colors.surface, padding: 14, borderRadius: 12 }} />
     {username.trim() !== savedUsername && <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ alignSelf: 'flex-start', backgroundColor: theme.colors.roseWash, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 }}><Text style={{ color: theme.colors.text }}>Save username</Text></Pressable>}
+    <Pressable accessibilityRole="button" onPress={() => setEditPin(value => !value)} style={{ alignSelf: 'flex-start', padding: 12, borderRadius: 12, backgroundColor: theme.colors.surface }}><Text style={{ color: theme.colors.text }}>{pinEnabled ? 'Remove offline app PIN' : 'Set optional offline app PIN'}</Text></Pressable>
+    {editPin && <View style={{ gap: 10 }}><Text style={{ color: theme.colors.muted }}>Six-digit PIN · App lock only. This does not encrypt cached cycle records.</Text><TextInput accessibilityLabel="Six-digit app PIN" secureTextEntry keyboardType="number-pad" maxLength={6} value={pin} onChangeText={setPin} style={{ padding: 14, borderRadius: 12, backgroundColor: theme.colors.surface, color: theme.colors.text }} /><Pressable accessibilityRole="button" onPress={() => { void (async () => { try { if (pinEnabled) { if (!await disablePin(pin)) throw new Error('Incorrect PIN'); } else await enablePin(pin); setEditPin(false); setPin(''); setMessage('PIN updated'); } catch (error) { setMessage(error instanceof Error ? error.message : 'PIN update failed'); } })(); }} style={{ alignSelf: 'flex-start', borderRadius: 12, padding: 12, backgroundColor: theme.colors.roseWash }}><Text style={{ color: theme.colors.text }}>{pinEnabled ? 'Confirm removal' : 'Enable PIN'}</Text></Pressable></View>}
     {saving && <ActivityIndicator />}
     {!!message && <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.text }}>{message}</Text>}
   </ScrollView>;
