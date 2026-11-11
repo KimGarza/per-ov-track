@@ -210,6 +210,9 @@ export async function handler(event) {
         );
         return json(200, { entries: rows });
       }
+      // Older app versions cannot bypass reset generations and resurrect deleted entries.
+      const legacy = await db.query('SELECT generation FROM cycle_sync_accounts WHERE user_id=(SELECT id FROM users WHERE cognito_sub=$1)', [userId]);
+      if (legacy.rows.length && Number(legacy.rows[0].generation) > 0) return json(409, { error: 'Please update Crimson Rhythm to synchronize cycle data' });
       const input = JSON.parse(event.body || '{}');
       if (typeof input.date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(input.date) || Number.isNaN(Date.parse(input.date)) || ![null, 'menstrual', 'ovulation'].includes(input.kind ?? null)) return json(400, { error: 'Invalid day entry' });
       if (input.kind && input.confirmed !== false && input.date > new Date().toISOString().slice(0, 10)) return json(400, { error: 'Future cycle observations are not allowed' });
