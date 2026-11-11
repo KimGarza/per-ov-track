@@ -22,6 +22,7 @@ function useCycleState() {
   const queue = useRef(Promise.resolve());
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'saved' | 'pending' | 'syncing'>('saved');
   // The effect only starts asynchronous storage work; state is updated after it resolves.
   // The active flag prevents an old account's load from updating a newly signed-in account.
   const load = useCallback(async (active: () => boolean = () => true) => {
@@ -77,6 +78,7 @@ function useCycleState() {
           state.pending.push({ mutationId: createMutationId(), generation: state.generation, baseRevision: state.revision, entry });
         }
         await saveSyncState(accountId, state);
+        if (changed.length) setSyncStatus('pending');
       }
 
     });
@@ -127,11 +129,16 @@ function useCycleState() {
   }, [commit, session, api, accountOnboardingKey]);
   const syncNow = useCallback(() => {
     if (!accountId || !session || !api || !accountStorageKey || !ready) return Promise.resolve();
-    const operation = queue.current.then(() => syncAccount(api, session.idToken, accountId, current.current, async next => {
+    const operation = queue.current.then(async () => {
+      setSyncStatus('syncing');
+      try { return await syncAccount(api, session.idToken, accountId, current.current, async next => {
       await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
       current.current = next;
       setData(next);
-    }));
+    });
+      } finally { /* Status is updated after the operation settles. */ }
+    });
+    operation.then(() => setSyncStatus('saved'), () => setSyncStatus('pending'));
     queue.current = operation.then(() => {}, () => {});
     return operation.then(() => {});
   }, [accountId, session, api, accountStorageKey, ready]);
@@ -172,7 +179,7 @@ function useCycleState() {
     current.current = next;
     setData(next);
   }, [ready, session, api, accountId, accountStorageKey, accountOnboardingKey]);
-  return { data, onboarding, syncNow, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
+  return { data, onboarding, syncStatus, syncNow, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }
 const CycleContext = createContext<ReturnType<typeof useCycleState> | null>(null);
 export function CycleDataProvider({ children }: PropsWithChildren) {
