@@ -1,5 +1,6 @@
 import { Alert, Platform, Pressable, View } from 'react-native';
 import { useState } from 'react';
+import { ActionButton } from './ActionButton';
 import { useCycleData } from './CycleDataProvider';
 import { analyzeCycles, confirmedPeriodStarts } from '@/utils/cycleInsights';
 import { dateKey, parseDate } from '@/utils/cycle';
@@ -42,9 +43,7 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
     <Text style={g.body}>Estimated next cycle: {insights.latestStart ? dateKey(new Date(parseDate(insights.latestStart).getFullYear(), parseDate(insights.latestStart).getMonth(), parseDate(insights.latestStart).getDate() + insights.cycleLength)) : 'Add a period to begin tracking'}</Text>
     <Text style={g.sectionHeading}>Reset cycle data</Text>
     <Text style={g.caption}>Resets follow your recorded menstrual cycles, not calendar months. A cycle can span two months.</Text>
-    {currentCycleStart && <Pressable accessibilityRole="button" disabled={busy} onPress={() => { setSelectedCycle(currentCycleStart); confirmReset(false, currentCycleStart); }} style={[g.outlineButton, { alignSelf: 'flex-start', paddingHorizontal: 18 }]}>
-      <Text style={g.label}>Reset this cycle</Text>
-    </Pressable>}
+    {currentCycleStart && <ActionButton disabled={busy} onPress={() => { setSelectedCycle(currentCycleStart); confirmReset(false, currentCycleStart); }}>Reset this cycle</ActionButton>}
     <Pressable accessibilityRole="button" disabled={busy || !cycleStarts.length} onPress={() => setShowCycles(value => !value)} style={[g.outlineButton, { alignSelf: 'flex-start', paddingHorizontal: 18 }]}>
       <Text style={g.label}>Choose an earlier cycle ▾</Text>
     </Pressable>
@@ -54,7 +53,7 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
       </Pressable>)}
     </View>}
     {selectedCycle && <Pressable accessibilityRole="button" disabled={busy} onPress={() => confirmReset(false)} style={[g.outlineButton, { alignSelf: 'flex-start' }]}><Text style={g.label}>Reset from selected cycle</Text></Pressable>}
-    <Pressable accessibilityRole="button" disabled={busy} onPress={() => confirmReset(true)} style={[g.outlineButton, { alignSelf: 'flex-start', borderColor: theme.colors.todayPeriod }]}><Text style={{ color: theme.colors.todayPeriod }}>Delete all cycle data</Text></Pressable>
+    <ActionButton variant="danger" disabled={busy} onPress={() => confirmReset(true)}>Delete all cycle data</ActionButton>
     {!!resetError && <Text accessibilityRole="alert" style={{ color: theme.colors.todayPeriod }}>{resetError}</Text>}
   </View>;
   return <View style={{ gap: theme.spacing.md }}><View style={[g.card, { backgroundColor: theme.colors.roseWash }]}><Text style={[g.heading, { fontSize: 28 }]}>{panel === 'billing' ? 'Billing, kept simple' : 'Your Crimson Rhythm subscription'}</Text><Text style={g.body}>{panel === 'billing' ? 'Billing is not connected yet. Payment details and receipts will appear here once billing is available.' : 'Subscriptions are not available yet. Plan details and subscription management will appear here when they are ready.'}</Text></View><Text style={g.body}>There is nothing to purchase or manage here yet.</Text></View>;
