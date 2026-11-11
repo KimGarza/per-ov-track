@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CycleData } from '@/utils/cycle';
-import { emptyCycleData } from '@/utils/cycle';
 export type SyncMutation = { mutationId: string; generation: number; baseRevision: number; entry: SyncEntry };
 export type SyncEntry = { date: string; kind?: string | null; confirmed?: boolean; flow?: string; mucus?: string; mood?: string; symptoms?: string; notes?: string; diary?: string; diaryStyle?: unknown; reflection?: unknown; deleted?: boolean; revision?: number };
 export type SyncState = { generation: number; revision: number; pending: SyncMutation[]; dirty: boolean };
