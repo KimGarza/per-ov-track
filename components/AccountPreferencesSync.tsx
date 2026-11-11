@@ -22,7 +22,7 @@ export function AccountPreferencesSync() {
         const body = await response.json();
         const remote = body.preferences?.theme as ThemeName | undefined;
         if (active && remote && remote in themes) {
-          const local = await AsyncStorage.getItem('crimson-rhythm:theme:v1');
+          const local = await AsyncStorage.getItem(`crimson-rhythm:theme:v1:${account}`);
           if (active && !local) setName(remote);
           else if (active && local && local !== remote) {
             // Prefer the explicit local selection and persist it to the account.
@@ -38,6 +38,7 @@ export function AccountPreferencesSync() {
   useEffect(() => {
     if (previous.current === name) return;
     previous.current = name;
+    if (account) void AsyncStorage.setItem(`crimson-rhythm:theme:v1:${account}`, name).catch(() => {});
     if (!account || !session || !api || hydrated.current !== account) return;
     void fetch(`${api}/users/me/preferences`, { method: 'PUT', headers: { Authorization: `Bearer ${session.idToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: name }) }).catch(() => {});
   }, [name, account, session, api]);
