@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import pg from 'pg';
 import { applyMigrations } from './migrate.mjs';
+import { handleCycleSync } from './cycle-sync.mjs';
 
 const secrets = new SecretsManagerClient({});
 let poolPromise;
@@ -117,6 +118,10 @@ export async function handler(event) {
       return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
     } catch (error) { if (error.code === '23505') return json(409, { error: 'Username already taken' }); console.error('Account update failed', { code: error.code }); return json(503, { error: 'Account update unavailable' }); }
   }
+  if (path.endsWith('/cycle/sync') && ['GET','POST'].includes(method)) {
+    const input = method === 'GET' ? { since: Number(event.queryStringParameters?.since ?? 0) } : JSON.parse(event.body || '{}');
+    return handleCycleSync(await pool(), userId, method, input);
+  }
   if (method === 'POST' && path.endsWith('/cycle/reset')) {
     try {
       const input = JSON.parse(event.body || '{}');
@@ -127,17 +132,24 @@ export async function handler(event) {
       const client = await db.connect();
       try {
         await client.query('BEGIN');
+        const user = await client.query('SELECT id FROM users WHERE cognito_sub=$1', [userId]);
+        if (!user.rows.length) throw new Error('Account unavailable');
+        const uid = user.rows[0].id;
+        await client.query('INSERT INTO cycle_sync_accounts(user_id) VALUES($1) ON CONFLICT DO NOTHING', [uid]);
+        const state = await client.query('SELECT revision,generation FROM cycle_sync_accounts WHERE user_id=$1 FOR UPDATE', [uid]);
+        const revision = Number(state.rows[0].revision) + 1;
+        await client.query('UPDATE cycle_sync_accounts SET revision=$2,generation=generation+1,reset_from=$3 WHERE user_id=$1', [uid,revision,scope === 'all' ? null : from]);
         await client.query(
           scope === 'all'
-            ? 'DELETE FROM cycle_day_entries WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1)'
-            : 'DELETE FROM cycle_day_entries WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1) AND entry_date >= $2::date',
-          scope === 'all' ? [userId] : [userId, from],
+            ? 'UPDATE cycle_day_entries SET kind=NULL,flow=NULL,cervical_mucus=NULL,mood=NULL,symptoms=NULL,notes=NULL,diary=NULL,diary_style=NULL,reflection=NULL,deleted_at=NOW(),sync_revision=$2 WHERE user_id=$1'
+            : 'UPDATE cycle_day_entries SET kind=NULL,flow=NULL,cervical_mucus=NULL,mood=NULL,symptoms=NULL,notes=NULL,diary=NULL,diary_style=NULL,reflection=NULL,deleted_at=NOW(),sync_revision=$3 WHERE user_id=$1 AND entry_date >= $2::date',
+          scope === 'all' ? [uid,revision] : [uid,from,revision],
         );
         if (scope === 'all') {
           await client.query('DELETE FROM cycle_profiles WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1)', [userId]);
         }
         await client.query('COMMIT');
-        return json(200, { reset: true });
+        return json(200, { reset: true, generation: Number(state.rows[0].generation)+1, revision });
       } catch (error) { await client.query('ROLLBACK'); throw error; }
       finally { client.release(); }
     } catch (error) { console.error('Cycle reset failed', { code: error.code }); return json(503, { error: 'Cycle reset unavailable' }); }
