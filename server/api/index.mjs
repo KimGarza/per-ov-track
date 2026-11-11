@@ -119,7 +119,7 @@ export async function handler(event) {
     } catch (error) { if (error.code === '23505') return json(409, { error: 'Username already taken' }); console.error('Account update failed', { code: error.code }); return json(503, { error: 'Account update unavailable' }); }
   }
   if (path.endsWith('/cycle/sync') && ['GET','POST'].includes(method)) {
-    const input = method === 'GET' ? { since: Number(event.queryStringParameters?.since ?? 0) } : JSON.parse(event.body || '{}');
+    const input = method === 'GET' ? { since: Number(event.queryStringParameters?.since ?? 0), after: event.queryStringParameters?.after } : JSON.parse(event.body || '{}');
     return handleCycleSync(await pool(), userId, method, input);
   }
   if (path.endsWith('/users/me/preferences') && ['GET','PUT'].includes(method)) {
