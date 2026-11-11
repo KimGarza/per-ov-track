@@ -60,11 +60,12 @@ export async function syncAccount(api: string, token: string, sub: string, data:
   };
   // Pull before pushing. Pending local edits always take precedence over downloaded rows.
   let cursor = state.revision;
+  let after = '0001-01-01';
   let next = data;
   let serverGeneration = state.generation;
   let serverRevision = state.revision;
   for (let page = 0; page < 100; page++) {
-    const { status, body } = await request(`/cycle/sync?since=${cursor}`);
+    const { status, body } = await request(`/cycle/sync?since=${cursor}&after=${after}`);
     if (status !== 200) throw new Error('Cloud download unavailable');
     serverGeneration = body.generation;
     serverRevision = body.revision;
@@ -81,7 +82,8 @@ export async function syncAccount(api: string, token: string, sub: string, data:
     const dirtyDates = new Set(state.pending.map(m => m.entry.date));
     for (const entry of body.entries as SyncEntry[]) if (!dirtyDates.has(entry.date)) next = applyRemote(next, entry);
     if (body.nextCursor == null) break;
-    cursor = body.nextCursor;
+    cursor = body.nextCursor.revision;
+    after = body.nextCursor.date;
     if (page === 99) throw new Error('Sync pagination limit reached');
   }
   if (JSON.stringify(next) !== JSON.stringify(data)) await persist(next);
