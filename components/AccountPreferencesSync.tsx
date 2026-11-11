@@ -10,7 +10,6 @@ export function AccountPreferencesSync() {
   const { name, setName } = useAppTheme();
   const hydrated = useRef<string | null>(null);
   const previous = useRef(name);
-  const initialized = useRef(false);
   const api = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
   const account = profile?.sub;
   useEffect(() => {
@@ -30,7 +29,7 @@ export function AccountPreferencesSync() {
             await fetch(`${api}/users/me/preferences`, { method: 'PUT', headers: { Authorization: `Bearer ${session.idToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: local }) });
           }
         }
-        if (active) { hydrated.current = account; initialized.current = true; }
+        if (active) { hydrated.current = account; }
       } catch { /* Retain the locally selected theme when offline. */ }
     };
     void run();
