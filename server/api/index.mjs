@@ -122,6 +122,21 @@ export async function handler(event) {
     const input = method === 'GET' ? { since: Number(event.queryStringParameters?.since ?? 0) } : JSON.parse(event.body || '{}');
     return handleCycleSync(await pool(), userId, method, input);
   }
+  if (path.endsWith('/users/me/preferences') && ['GET','PUT'].includes(method)) {
+    try {
+      const db = await pool();
+      if (method === 'GET') {
+        const { rows } = await db.query('SELECT theme FROM user_preferences WHERE user_id=(SELECT id FROM users WHERE cognito_sub=$1)', [userId]);
+        return json(200, { preferences: rows[0] ?? null });
+      }
+      const input = JSON.parse(event.body || '{}');
+      if (!['grace','petal','burgundy','sanctuary'].includes(input.theme)) return json(400, { error: 'Unknown theme' });
+      const { rows } = await db.query(`INSERT INTO user_preferences(user_id,theme)
+        SELECT id,$2 FROM users WHERE cognito_sub=$1
+        ON CONFLICT(user_id) DO UPDATE SET theme=EXCLUDED.theme,updated_at=NOW() RETURNING theme`, [userId,input.theme]);
+      return rows.length ? json(200, { preferences: rows[0] }) : json(404, { error: 'Account unavailable' });
+    } catch (error) { console.error('Preferences unavailable', { code: error.code }); return json(503, { error: 'Preferences unavailable' }); }
+  }
   if (method === 'POST' && path.endsWith('/cycle/reset')) {
     try {
       const input = JSON.parse(event.body || '{}');
