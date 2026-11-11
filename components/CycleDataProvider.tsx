@@ -145,21 +145,30 @@ function useCycleState() {
   }, [commit, session, api, accountOnboardingKey]);
   const syncNow = useCallback(() => {
     if (!accountId || !session || !api || !accountStorageKey || !ready) return Promise.resolve();
+    // Capture narrowed values for the asynchronous callback.
+    const sub = accountId;
+    const token = session.idToken;
+    const baseUrl = api;
+    const dataKey = accountStorageKey;
+    const profileKey = accountOnboardingKey;
     const operation = queue.current.then(async () => {
       setSyncStatus('syncing');
-      try { return await syncAccount(api, session.idToken, accountId, current.current, async next => {
-      await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
-      current.current = next;
-      setData(next);
-    });
-        if (accountOnboardingKey && await AsyncStorage.getItem(`${accountOnboardingKey}:pending`)) {
-          const saved = await AsyncStorage.getItem(accountOnboardingKey);
-          if (saved) {
-            const response = await fetch(`${api}/cycle/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: saved });
-            if (response.ok) await AsyncStorage.removeItem(`${accountOnboardingKey}:pending`);
-          }
+      await syncAccount(baseUrl, token, sub, current.current, async next => {
+        await AsyncStorage.setItem(dataKey, JSON.stringify(next));
+        current.current = next;
+        setData(next);
+      });
+      if (profileKey && await AsyncStorage.getItem(`${profileKey}:pending`)) {
+        const saved = await AsyncStorage.getItem(profileKey);
+        if (saved) {
+          const response = await fetch(`${baseUrl}/cycle/profile`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: saved,
+          });
+          if (response.ok) await AsyncStorage.removeItem(`${profileKey}:pending`);
         }
-      } finally { /* Status is updated after the operation settles. */ }
+      }
     });
     operation.then(() => setSyncStatus('saved'), () => setSyncStatus('pending'));
     queue.current = operation.then(() => {}, () => {});
