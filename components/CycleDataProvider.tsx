@@ -136,8 +136,9 @@ function useCycleState() {
     });
     if (!accountOnboardingKey) throw new Error('Account unavailable');
     await AsyncStorage.setItem(accountOnboardingKey, JSON.stringify(answers));
+    await AsyncStorage.setItem(`${accountOnboardingKey}:pending`, 'true');
     if (session && api) {
-      try { const response = await fetch(`${api}/cycle/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(answers) }); if (!response.ok) console.warn('Profile cloud sync unavailable', response.status); }
+      try { const response = await fetch(`${api}/cycle/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(answers) }); if (response.ok) await AsyncStorage.removeItem(`${accountOnboardingKey}:pending`); }
       catch { console.warn('Profile cloud sync unavailable'); }
     }
     setOnboarding(answers);
@@ -151,12 +152,19 @@ function useCycleState() {
       current.current = next;
       setData(next);
     });
+        if (accountOnboardingKey && await AsyncStorage.getItem(`${accountOnboardingKey}:pending`)) {
+          const saved = await AsyncStorage.getItem(accountOnboardingKey);
+          if (saved) {
+            const response = await fetch(`${api}/cycle/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: saved });
+            if (response.ok) await AsyncStorage.removeItem(`${accountOnboardingKey}:pending`);
+          }
+        }
       } finally { /* Status is updated after the operation settles. */ }
     });
     operation.then(() => setSyncStatus('saved'), () => setSyncStatus('pending'));
     queue.current = operation.then(() => {}, () => {});
     return operation.then(() => {});
-  }, [accountId, session, api, accountStorageKey, ready]);
+  }, [accountId, session, api, accountStorageKey, accountOnboardingKey, ready]);
   useEffect(() => {
     if (!ready || !accountId) return;
     const timer = setTimeout(() => { void syncNow().catch(() => {}); }, 1500);
