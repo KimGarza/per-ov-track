@@ -15,7 +15,7 @@ export default function AppLayout() {
     headerShown: false,
     tabBarActiveTintColor: theme.colors.rose,
     tabBarInactiveTintColor: theme.colors.muted,
-    tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, height: 65, paddingTop: 5, paddingBottom: 6 },
+    tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingTop: 5 },
     tabBarLabelStyle: { fontSize: 11 },
   }}>
     {items.map(item => <Tabs.Screen key={item.name} name={item.name} options={{ title: item.title, tabBarIcon: ({ color }) => <Text style={{ fontSize: 23, color }}>{item.icon}</Text> }} />)}
