@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import pg from 'pg';
-import { CognitoIdentityProviderClient, AdminDeleteUserCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, AdminDeleteUserCommand, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { applyMigrations } from './migrate.mjs';
 import { handleCycleSync } from './cycle-sync.mjs';
 
@@ -116,7 +116,9 @@ export async function handler(event) {
       // Database removal is prepared first. Cognito deletion occurs only once
       // the database cascade is known to succeed.
       await client.query('DELETE FROM users WHERE cognito_sub=$1', [userId]);
-      await cognito.send(new AdminDeleteUserCommand({ UserPoolId: process.env.COGNITO_USER_POOL_ID, Username: userId }));
+      const identity = await cognito.send(new ListUsersCommand({ UserPoolId: process.env.COGNITO_USER_POOL_ID, Filter: `sub = "${userId}"`, Limit: 2 }));
+      if (identity.Users?.length !== 1 || !identity.Users[0].Username) throw new Error('Cognito identity could not be resolved');
+      await cognito.send(new AdminDeleteUserCommand({ UserPoolId: process.env.COGNITO_USER_POOL_ID, Username: identity.Users[0].Username }));
       await client.query('COMMIT');
       return json(200, { deleted: true });
     } catch (error) {
