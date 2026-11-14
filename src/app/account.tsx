@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { Stack, router } from 'expo-router';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useAppTheme } from '@/components/ThemeProvider';
@@ -71,6 +73,17 @@ export default function AccountScreen() {
     try {
       const response = await fetch(`${base}/users/me`, { method: 'DELETE', headers: { Authorization: `Bearer ${session.idToken}` } });
       if (!response.ok) throw new Error('Account deletion was not confirmed. Please try again while connected.');
+      if (profile?.sub) {
+        const sub = profile.sub;
+        await AsyncStorage.multiRemove([
+          `crimson-rhythm:cycle-data:v1:${sub}`,
+          `crimson-rhythm:cycle-onboarding:v1:${sub}`,
+          `crimson-rhythm:cycle-onboarding:v1:${sub}:pending`,
+          `crimson-rhythm:sync:v1:${sub}`,
+          `crimson-rhythm:theme:v1:${sub}`,
+        ]);
+        await SecureStore.deleteItemAsync(`crimson.pin.${sub}`).catch(() => {});
+      }
       await signOut(); router.replace('/welcome');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Account deletion failed'); }
     finally { setBusy(false); }
