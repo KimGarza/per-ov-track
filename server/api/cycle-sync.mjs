@@ -9,7 +9,7 @@ export async function handleCycleSync(db, userSub, method, body) {
     if (!user.rows.length) { await client.query('ROLLBACK'); return response(404, { error: 'Account not initialized' }); }
     const userId = user.rows[0].id;
     await client.query('INSERT INTO cycle_sync_accounts(user_id) VALUES($1) ON CONFLICT DO NOTHING', [userId]);
-    const stateResult = await client.query('SELECT revision,generation,to_char(reset_from,'YYYY-MM-DD') AS reset_from FROM cycle_sync_accounts WHERE user_id=$1 FOR UPDATE', [userId]);
+    const stateResult = await client.query(`SELECT revision,generation,to_char(reset_from,'YYYY-MM-DD') AS reset_from FROM cycle_sync_accounts WHERE user_id=$1 FOR UPDATE`, [userId]);
     const state = stateResult.rows[0];
     if (method === 'GET') {
       const since = Number(body.since ?? 0);
