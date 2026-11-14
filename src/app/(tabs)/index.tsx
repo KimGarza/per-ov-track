@@ -59,7 +59,7 @@ export default function HomeScreen() {
   const currentCycleDay = cycleDay(data, today);
   const openDay = (day: string, field?: keyof JournalEntry) => { setSelected(day); setEditor({ type: 'day', day, field }); };
   const changeMonth = (value: Date) => { setMonth(value); setSelected(dateKey(value)); };
-  return <SafeAreaView style={g.screen} edges={['top', 'bottom']}>
+  return <SafeAreaView style={g.screen} edges={['top']}>
     <FaithBackdrop />
     <View style={{ flex: 1 }} onLayout={({ nativeEvent: { layout } }) => setViewport(previous => previous.width === layout.width && previous.height === layout.height ? previous : { width: layout.width, height: layout.height })}>
     <ScrollView contentContainerStyle={[g.content, s.content]} showsVerticalScrollIndicator={false}>
