@@ -108,17 +108,22 @@ export async function handler(event) {
     }
   }
   if (method === 'DELETE' && path.endsWith('/users/me')) {
+    let client;
     try {
       const db = await pool();
-      // Delete the Cognito identity first, then remove all database records through
-      // the users foreign-key cascades. If DB deletion fails, retry via support.
+      client = await db.connect();
+      await client.query('BEGIN');
+      // Database removal is prepared first. Cognito deletion occurs only once
+      // the database cascade is known to succeed.
+      await client.query('DELETE FROM users WHERE cognito_sub=$1', [userId]);
       await cognito.send(new AdminDeleteUserCommand({ UserPoolId: process.env.COGNITO_USER_POOL_ID, Username: userId }));
-      await db.query('DELETE FROM users WHERE cognito_sub=$1', [userId]);
+      await client.query('COMMIT');
       return json(200, { deleted: true });
     } catch (error) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
       console.error('Account deletion failed', { code: error.code, name: error.name });
-      return json(503, { error: 'Account deletion could not be completed. Contact support if the account is no longer accessible.' });
-    }
+      return json(503, { error: 'Account deletion could not be completed. Please contact support if the account is no longer accessible.' });
+    } finally { client?.release(); }
   }
   if (method === 'PATCH' && path.endsWith('/users/me')) {
     try {
