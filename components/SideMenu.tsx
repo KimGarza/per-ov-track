@@ -61,7 +61,7 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
               <Text style={{ color: theme.colors.text, fontSize: 17 }}>My Account</Text>
               <Text style={{ color: theme.colors.muted, marginLeft: 'auto' }}>›</Text>
             </Pressable>
-            {items.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.label} onPress={event => { if (item.id === 'account') { setOpen(false); router.push('/account'); } else if (item.id === 'themes') event.currentTarget.measureInWindow((x, y, width, height) => setThemeAnchor({ x, y, width, height })); else openPanel(item.id); }} style={{ paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, backgroundColor: theme.colors.surface }}><Text style={{ color: theme.colors.text, fontSize: 16 }}>{item.icon}   {item.label}</Text></Pressable>)}
+            {items.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.label} onPress={event => { if (item.id === 'themes') event.currentTarget.measureInWindow((x, y, width, height) => setThemeAnchor({ x, y, width, height })); else openPanel(item.id); }} style={{ paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, backgroundColor: theme.colors.surface }}><Text style={{ color: theme.colors.text, fontSize: 16 }}>{item.icon}   {item.label}</Text></Pressable>)}
             <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={() => { setOpen(false); void signOut().then(() => router.replace('/welcome')); }} style={{ marginTop: 20, padding: 12 }}><Text style={{ color: theme.colors.rose, fontSize: 16 }}>↪  Sign out</Text></Pressable>
           </ScrollView>
         </SafeAreaView></Animated.View>
