@@ -22,7 +22,7 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: [cognito-idp:AdminDeleteUser]
+                Action: [cognito-idp:AdminDeleteUser, cognito-idp:ListUsers]
                 Resource: !Sub
                   - 'arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${Pool}'
                   - Pool: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
