@@ -28,7 +28,7 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
   const [avatar, setAvatar] = useState('✿');
   useEffect(() => {
     if (!session) return;
-    const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\\/$/, '');
+    const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
     if (!base) return;
     let active = true;
     void fetch(`${base}/users/me`, { headers: { Authorization: `Bearer ${session.idToken}` } })
