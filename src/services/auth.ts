@@ -4,7 +4,10 @@ import { Platform } from 'react-native';
 
 const domain = process.env.EXPO_PUBLIC_COGNITO_DOMAIN?.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
 const clientId = process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID?.trim();
-export const redirectUri = 'crimsonrhythm://auth/callback';
+// Browser OAuth uses the actual localhost origin; installed mobile builds use the app scheme.
+export const redirectUri = Platform.OS === 'web' && typeof window !== 'undefined'
+  ? `${window.location.origin}/auth/callback`
+  : 'crimsonrhythm://auth/callback';
 const storageKey = 'crimson-rhythm-session-v1';
 
 export type Session = { accessToken: string; idToken: string; refreshToken?: string; expiresAt: number };
