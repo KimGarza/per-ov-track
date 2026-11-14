@@ -2,10 +2,12 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import pg from 'pg';
+import { CognitoIdentityProviderClient, AdminDeleteUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { applyMigrations } from './migrate.mjs';
 import { handleCycleSync } from './cycle-sync.mjs';
 
 const secrets = new SecretsManagerClient({});
+const cognito = new CognitoIdentityProviderClient({});
 let poolPromise;
 const json = (statusCode, body) => ({
   statusCode,
@@ -96,7 +98,7 @@ export async function handler(event) {
     try {
       const db = await pool();
       const { rows } = await db.query(
-        'SELECT id, email, username, avatar, created_at FROM users WHERE cognito_sub = $1',
+        'SELECT id, email, avatar, created_at FROM users WHERE cognito_sub = $1',
         [userId],
       );
       return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
@@ -105,15 +107,27 @@ export async function handler(event) {
       return json(503, { error: 'Account unavailable' });
     }
   }
+  if (method === 'DELETE' && path.endsWith('/users/me')) {
+    try {
+      const db = await pool();
+      // Delete the Cognito identity first, then remove all database records through
+      // the users foreign-key cascades. If DB deletion fails, retry via support.
+      await cognito.send(new AdminDeleteUserCommand({ UserPoolId: process.env.COGNITO_USER_POOL_ID, Username: userId }));
+      await db.query('DELETE FROM users WHERE cognito_sub=$1', [userId]);
+      return json(200, { deleted: true });
+    } catch (error) {
+      console.error('Account deletion failed', { code: error.code, name: error.name });
+      return json(503, { error: 'Account deletion could not be completed. Contact support if the account is no longer accessible.' });
+    }
+  }
   if (method === 'PATCH' && path.endsWith('/users/me')) {
     try {
       const input = JSON.parse(event.body || '{}');
-      if (typeof input.username !== 'string' || input.username.length > 40 || (input.username && !/^[a-zA-Z0-9_.-]{3,40}$/.test(input.username))) return json(400, { error: 'Username must be 3–40 letters, numbers, dots, underscores or hyphens, or empty.' });
       if (input.avatar != null && !['flower','dove','heart','cross','sun','leaf'].includes(input.avatar)) return json(400, { error: 'Unknown avatar' });
       const db = await pool();
       const { rows } = await db.query(
-        'UPDATE users SET username = $1, avatar = COALESCE($2, avatar), updated_at = NOW() WHERE cognito_sub = $3 RETURNING username, avatar, email',
-        [input.username || null, input.avatar ?? null, userId],
+        'UPDATE users SET avatar = $1, updated_at = NOW() WHERE cognito_sub = $2 RETURNING avatar, email',
+        [input.avatar ?? null, userId],
       );
       return rows.length ? json(200, { user: rows[0] }) : json(404, { error: 'Account not initialized' });
     } catch (error) { if (error.code === '23505') return json(409, { error: 'Username already taken' }); console.error('Account update failed', { code: error.code }); return json(503, { error: 'Account update unavailable' }); }
