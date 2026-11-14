@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { authConfig, decodeProfile, loadSession, redirectUri, refreshSession, revokeSession, saveSession, toSession, type Profile, type Session } from '@/src/services/auth';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -33,6 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (provider?: 'Google' | 'SignInWithApple', mode: 'login' | 'signup' = 'login') => {
+    if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+      throw new Error('Cognito sign-in requires the Crimson Rhythm development app on Android, or Expo Web in your browser. Expo Go cannot receive the registered crimsonrhythm:// callback.');
+    }
     const { clientId, discovery } = authConfig();
     const request = new AuthSession.AuthRequest({
       clientId, redirectUri, responseType: AuthSession.ResponseType.Code,
