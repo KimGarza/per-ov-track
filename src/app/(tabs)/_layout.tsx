@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Platform, Text } from 'react-native';
+import { Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SideMenuProvider } from '@/components/SideMenu';
 import { useAppTheme } from '@/components/ThemeProvider';
@@ -7,7 +7,7 @@ import { useAppTheme } from '@/components/ThemeProvider';
 export default function AppLayout() {
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const bottomInset = Platform.OS === 'android' ? insets.bottom : insets.bottom;
+  const bottomInset = insets.bottom;
   const barContentHeight = 56;
   const items = [
     { name: 'index', title: 'Calendar', icon: '▦' },
