@@ -38,7 +38,7 @@ export default function HomeScreen() {
   const { data, ready, error, retry, onboarding, saveOnboarding, syncStatus } = useCycleData();
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [viewport, setViewport] = useState({ width: window.width, height: window.height - insets.top - insets.bottom });
+  const [viewport, setViewport] = useState({ width: window.width, height: window.height - insets.top });
   const compact = viewport.height < 560;
   const s = useMemo(() => createStyles(theme, viewport.width, compact), [theme, viewport.width, compact]);
   const today = useToday();
