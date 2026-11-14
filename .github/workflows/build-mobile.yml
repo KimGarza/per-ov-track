@@ -2,7 +2,10 @@ name: Deploy to EAS
 
 on:
   push:
-    branches: [dev, stage, prod]
+    # TEMPORARY: Dev EAS builds/submissions paused until November 28, 2026 (quota).
+    # Restore dev to this list when builds are available again.
+    # branches: [dev, stage, prod]
+    branches: [stage, prod]
     paths:
       - 'src/**'
       - 'components/**'
