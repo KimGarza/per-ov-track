@@ -53,7 +53,7 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
       if (!session || !supportMessage.trim() || busy) return;
       setBusy(true); setResetError('');
       try {
-        const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\\/$/, '');
+        const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
         if (!base) throw new Error('Support is unavailable right now.');
         const response = await fetch(`${base}/support/messages`, { method: 'POST', headers: { Authorization: `Bearer ${session.idToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ category: supportCategory, message: supportMessage.trim() }) });
         if (!response.ok) throw new Error('Could not send your message. Please try again.');
