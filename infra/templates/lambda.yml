@@ -5,6 +5,12 @@ Parameters:
     AllowedValues: [dev, stage, prod]
   ArtifactBucket: {Type: String}
   ArtifactKey: {Type: String}
+  RevenueCatSecretArn:
+    Type: String
+    Default: ''
+    Description: Optional Secrets Manager ARN containing JSON with apiKey (RevenueCat v1 secret key).
+Conditions:
+  HasRevenueCatSecret: !Not [!Equals [!Ref RevenueCatSecretArn, '']]
 Resources:
   ExecutionRole:
     Type: AWS::IAM::Role
@@ -33,6 +39,16 @@ Resources:
               - Effect: Allow
                 Action: [ses:SendEmail]
                 Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/crimsonrhythm.app'
+        - !If
+          - HasRevenueCatSecret
+          - PolicyName: ReadRevenueCatSecret
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: [secretsmanager:GetSecretValue]
+                  Resource: !Ref RevenueCatSecretArn
+          - !Ref AWS::NoValue
         - PolicyName: ReadDatabaseSecret
           PolicyDocument:
             Version: '2012-10-17'
@@ -59,6 +75,7 @@ Resources:
       Environment:
         Variables:
           APP_ENV: !Ref env
+          REVENUECAT_SECRET_ARN: !Ref RevenueCatSecretArn
           SUPPORT_SENDER_EMAIL: support@crimsonrhythm.app
           COGNITO_USER_POOL_ID: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
           DB_HOST: !ImportValue {Fn::Sub: 'crimrhyth-${env}-DatabaseEndpoint'}

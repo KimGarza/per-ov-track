@@ -1,3 +1,5 @@
+import { AccountContent } from './AccountContent';
+import { BillingContent } from './BillingContent';
 import { Alert, Platform, Pressable, View, TextInput, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -12,12 +14,13 @@ import { BibleGuidance } from './BibleGuidance';
 import { InsightsContent } from './InsightsContent';
 import { JournalContent } from './JournalContent';
 
-export type PrimaryPanel = 'themes' | 'settings' | 'billing' | 'subscription' | 'insights' | 'faith' | 'journal' | 'support' | 'privacy';
-export const panelTitles: Record<PrimaryPanel, string> = { themes: 'Themes', settings: 'Settings', billing: 'Billing', subscription: 'Subscription', insights: 'Insights', faith: 'Faith & guidance', journal: 'Journal & goals', support: 'Help & Support', privacy: 'Privacy & Data' };
+export type PrimaryPanel = 'account' | 'account-options' | 'password' | 'delete-account' | 'themes' | 'settings' | 'billing' | 'subscription' | 'insights' | 'faith' | 'journal' | 'support' | 'privacy';
+export const panelTitles: Record<PrimaryPanel, string> = { account: 'My Account', 'account-options': 'Account options', password: 'Change password', 'delete-account': 'Delete account', themes: 'Themes', settings: 'Settings', billing: 'Billing', subscription: 'Subscription', insights: 'Insights', faith: 'Faith & guidance', journal: 'Journal & goals', support: 'Help & Support', privacy: 'Privacy & Data' };
 export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPanel; onClose: () => void; onChange: (panel: PrimaryPanel) => void }) {
   const { theme, styles: g, setName } = useAppTheme();
   const { session } = useAuth();
   const [supportCategory, setSupportCategory] = useState('Feedback');
+  const [topicsOpen, setTopicsOpen] = useState(false);
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSent, setSupportSent] = useState(false);
   const { data, onboarding, resetCycleData } = useCycleData();
@@ -37,6 +40,8 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
     if (Platform.OS === 'web') { if (globalThis.confirm(question)) void perform(); }
     else Alert.alert('Delete cycle data?', question, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => { void perform(); } }]);
   };
+  if (panel === 'account' || panel === 'account-options' || panel === 'password' || panel === 'delete-account') return <AccountContent section={panel} onNavigate={onChange} />;
+  if (panel === 'billing' || panel === 'subscription') return <BillingContent />;
   if (panel === 'insights') return <InsightsContent />;
   if (panel === 'journal') return <JournalContent />;
   if (panel === 'faith') return <BibleGuidance />;
@@ -45,6 +50,7 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
     <Text style={g.sectionHeading}>Your information</Text>
     <Text style={g.body}>Your cycle entries and journal belong to your account. You can clear your history in Cycle Settings or permanently delete your account in My Account.</Text>
     <Text style={g.body}>Your records sync with our private cloud database when you are online. Some information is also stored on this device for offline access.</Text>
+    <Text style={g.body}>Subscriptions are processed by Google Play or Apple and managed through RevenueCat. Your cycle and journal entries are not sent to RevenueCat.</Text>
     <Text style={g.caption}>For privacy questions, contact support@crimsonrhythm.app.</Text>
   </View>;
   if (panel === 'support') {
@@ -57,7 +63,7 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
         if (!base) throw new Error('Support is unavailable right now.');
         const response = await fetch(`${base}/support/messages`, { method: 'POST', headers: { Authorization: `Bearer ${session.idToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ category: supportCategory, message: supportMessage.trim() }) });
         if (!response.ok) throw new Error('Could not send your message. Please try again.');
-        setSupportSent(true);
+        setSupportSent(true); setSupportMessage('');
       } catch (error) { setResetError(error instanceof Error ? error.message : 'Could not send message'); }
       finally { setBusy(false); }
     };
@@ -68,12 +74,17 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
     </View> : <View style={{ gap: 14 }}>
       <Text style={g.sectionHeading}>How can we help?</Text>
       <Text style={g.caption}>Choose a topic and tell us what&apos;s on your mind.</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {categories.map(category => <Pressable key={category} accessibilityRole="button" accessibilityState={{ selected: supportCategory === category }} onPress={() => setSupportCategory(category)} style={{ paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: supportCategory === category ? theme.colors.roseWash : theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }}><Text style={g.body}>{category}</Text></Pressable>)}
+      <View style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.surface, overflow: 'hidden' }}>
+        <Pressable accessibilityRole="combobox" accessibilityLabel="Support topic" accessibilityValue={{ text: supportCategory }} accessibilityState={{ expanded: topicsOpen }} onPress={() => setTopicsOpen(value => !value)} style={{ minHeight: 48, padding: 14, flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+          <Text style={g.body}>{supportCategory}</Text><Text style={g.body}>{topicsOpen ? '▴' : '▾'}</Text>
+        </Pressable>
+        {topicsOpen && <View accessibilityRole="list" style={{ borderTopWidth: 1, borderColor: theme.colors.border }}>
+          {categories.map(category => <Pressable key={category} accessibilityRole="button" accessibilityState={{ selected: supportCategory === category }} onPress={() => { setSupportCategory(category); setTopicsOpen(false); }} style={{ minHeight: 44, padding: 12, backgroundColor: supportCategory === category ? theme.colors.roseWash : theme.colors.surface }}><Text style={g.body}>{category}</Text></Pressable>)}
+        </View>}
       </View>
-      <TextInput multiline accessibilityLabel="Support message" placeholder="Write your message…" placeholderTextColor={theme.colors.placeholder} maxLength={4000} value={supportMessage} onChangeText={setSupportMessage} style={{ minHeight: 150, textAlignVertical: 'top', borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.surface, color: theme.colors.text, padding: 14 }} />
+      <TextInput multiline accessibilityLabel="Support message" placeholder="Write your message…" placeholderTextColor={theme.colors.placeholder} maxLength={4000} value={supportMessage} onFocus={() => setTopicsOpen(false)} onChangeText={setSupportMessage} style={{ minHeight: 150, textAlignVertical: 'top', borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.surface, color: theme.colors.text, padding: 14 }} />
       <Text style={g.caption}>Sent privately to support@crimsonrhythm.app</Text>
-      <ActionButton variant="primary" disabled={busy || !supportMessage.trim()} onPress={() => { void send(); }}>Send message</ActionButton>
+      <ActionButton variant="primary" disabled={busy || !session || !supportMessage.trim()} onPress={() => { void send(); }}>{busy ? 'Sending…' : 'Send message'}</ActionButton>
       {!!resetError && <Text accessibilityRole="alert" style={{ color: theme.colors.todayPeriod }}>{resetError}</Text>}
     </View>;
   }
@@ -103,5 +114,5 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
     </View>
     {!!resetError && <Text accessibilityRole="alert" style={{ color: theme.colors.todayPeriod }}>{resetError}</Text>}
   </View>;
-  return <View style={{ gap: theme.spacing.md }}><View style={[g.card, { backgroundColor: theme.colors.roseWash }]}><Text style={[g.heading, { fontSize: 28 }]}>{panel === 'billing' ? 'Billing, kept simple' : 'Your Crimson Rhythm subscription'}</Text><Text style={g.body}>{panel === 'billing' ? 'Billing is not connected yet. Payment details and receipts will appear here once billing is available.' : 'Subscriptions are not available yet. Plan details and subscription management will appear here when they are ready.'}</Text></View><Text style={g.body}>There is nothing to purchase or manage here yet.</Text></View>;
+  return null;
 }

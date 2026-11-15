@@ -1,3 +1,4 @@
+import { clearBillingIdentity } from '@/src/services/billing';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    await clearBillingIdentity().catch(() => {});
     await revokeSession(session);
     setSession(null); setProfile(null);
   }, [session]);
