@@ -9,7 +9,7 @@ export async function handleCycleSync(db, userSub, method, body) {
     if (!user.rows.length) { await client.query('ROLLBACK'); return response(404, { error: 'Account not initialized' }); }
     const userId = user.rows[0].id;
     await client.query('INSERT INTO cycle_sync_accounts(user_id) VALUES($1) ON CONFLICT DO NOTHING', [userId]);
-    const stateResult = await client.query(`SELECT revision,generation,to_char(reset_from,'YYYY-MM-DD') AS reset_from FROM cycle_sync_accounts WHERE user_id=$1 FOR UPDATE`, [userId]);
+    const stateResult = await client.query(`SELECT revision,generation,to_char(reset_from,'YYYY-MM-DD') AS reset_from,to_char(reset_to,'YYYY-MM-DD') AS reset_to FROM cycle_sync_accounts WHERE user_id=$1 FOR UPDATE`, [userId]);
     const state = stateResult.rows[0];
     if (method === 'GET') {
       const since = Number(body.since ?? 0);
@@ -18,7 +18,7 @@ export async function handleCycleSync(db, userSub, method, body) {
       const result = await client.query(`SELECT to_char(entry_date,'YYYY-MM-DD') AS entry_date,kind,confirmed,flow,cervical_mucus,mood,symptoms,notes,diary,diary_style,reflection,deleted_at,sync_revision
         FROM cycle_day_entries WHERE user_id=$1 AND sync_revision>$2 ORDER BY sync_revision,entry_date LIMIT 251`, [userId, since]);
       await client.query('COMMIT');
-      return response(200, { generation: Number(state.generation), resetFrom: state.reset_from, revision: Number(state.revision), entries: result.rows.slice(0,250).map(row), nextCursor: result.rows.length > 250 ? { revision: Number(result.rows[249].sync_revision), date: result.rows[249].entry_date } : null });
+      return response(200, { generation: Number(state.generation), resetFrom: state.reset_from, resetTo: state.reset_to, revision: Number(state.revision), entries: result.rows.slice(0,250).map(row), nextCursor: result.rows.length > 250 ? { revision: Number(result.rows[249].sync_revision), date: result.rows[249].entry_date } : null });
     }
     if (method !== 'POST') { await client.query('ROLLBACK'); return response(405, { error: 'Method not allowed' }); }
     const { mutationId, generation, baseRevision, entry } = body;
