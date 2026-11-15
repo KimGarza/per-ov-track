@@ -39,7 +39,7 @@ export function SideMenuProvider({ children }: { children: ReactNode }) {
   const [themeAnchor, setThemeAnchor] = useState<AnchorRect | null>(null);
   const [panel, setPanel] = useState<PrimaryPanel | null>(null);
   const openPanel = useCallback((value: PrimaryPanel) => { setOpen(false); setPanel(value); }, []);
-  const items = [{ label: 'Themes', icon: '✿', id: 'themes' }, { label: 'Cycle Settings', icon: '◷', id: 'settings' }, { label: 'Subscription / Billing', icon: '▤', id: 'subscription' }] as const;
+  const items = [{ label: 'Themes', icon: '✿', id: 'themes' }, { label: 'Cycle Settings', icon: '◷', id: 'settings' }, { label: 'Subscription / Billing', icon: '▤', id: 'subscription' }, { label: 'Privacy & Data', icon: '♡', id: 'privacy' }, { label: 'Help & Support', icon: '?', id: 'support' }] as const;
   const inactive = open || !!panel || externalOverlay;
   const softenCalendar = !!panel || externalOverlay;
   const nativeBlur = Platform.OS === 'android' && Number(Platform.Version) >= 31;
