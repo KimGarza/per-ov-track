@@ -26,6 +26,13 @@ Resources:
                 Resource: !Sub
                   - 'arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${Pool}'
                   - Pool: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
+        - PolicyName: SendSupportEmail
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [ses:SendEmail]
+                Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/crimsonrhythm.app'
         - PolicyName: ReadDatabaseSecret
           PolicyDocument:
             Version: '2012-10-17'
@@ -52,6 +59,7 @@ Resources:
       Environment:
         Variables:
           APP_ENV: !Ref env
+          SUPPORT_SENDER_EMAIL: support@crimsonrhythm.app
           COGNITO_USER_POOL_ID: !ImportValue {Fn::Sub: 'crimrhyth-${env}-UserPoolId'}
           DB_HOST: !ImportValue {Fn::Sub: 'crimrhyth-${env}-DatabaseEndpoint'}
           DB_NAME: !Sub 'crimrhyth_${env}'
