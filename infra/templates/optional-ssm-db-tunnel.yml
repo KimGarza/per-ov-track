@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Optional private Session Manager tunnel for DBeaver. Deploy on demand; remove when finished.
+Parameters:
+  env:
+    Type: String
+    AllowedValues: [dev, stage, prod]
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+Resources:
+  TunnelRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: [ec2.amazonaws.com]}, Action: ['sts:AssumeRole']}]
+      ManagedPolicyArns: ['arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore']
+  TunnelProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: {Roles: [!Ref TunnelRole]}
+  TunnelGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Private SSM database tunnel - no inbound rules
+      VpcId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-VpcId'}
+  TunnelDatabaseIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-DatabaseGroupId'}
+      SourceSecurityGroupId: !Ref TunnelGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+  TunnelHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: t3.nano
+      IamInstanceProfile: !Ref TunnelProfile
+      SubnetId: !ImportValue {Fn::Sub: 'crimrhyth-${env}-SubnetAId'}
+      SecurityGroupIds: [!Ref TunnelGroup]
+      Tags: [{Key: Name, Value: !Sub 'crimrhyth-${env}-ssm-tunnel'}]
+Outputs:
+  InstanceId: {Value: !Ref TunnelHost}
