@@ -2,6 +2,7 @@
   "Parameters": {
     "CallbackUrl": "crimsonrhythm://auth/callback",
     "LogoutUrl": "crimsonrhythm://",
-    "EnableGoogle": "true"
+    "EnableGoogle": "true",
+    "LocalWebCallbackUrl": "http://localhost:8081/auth/callback"
   }
 }

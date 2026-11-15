@@ -1,10 +1,19 @@
 import * as AuthSession from 'expo-auth-session';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import * as Linking from 'expo-linking';
 
 const domain = process.env.EXPO_PUBLIC_COGNITO_DOMAIN?.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
 const clientId = process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID?.trim();
-export const redirectUri = 'crimsonrhythm://auth/callback';
+// Cognito requires an exact allowlisted redirect for every runtime.
+// Expo Go uses an exp:// URL that varies by Metro host; register the exact URL
+// shown by your running development session in Cognito before attempting sign-in.
+export const redirectUri = Platform.OS === 'web' && typeof window !== 'undefined'
+  ? `${window.location.origin}/auth/callback`
+  : Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+    ? Linking.createURL('auth/callback')
+    : 'crimsonrhythm://auth/callback';
 const storageKey = 'crimson-rhythm-session-v1';
 
 export type Session = { accessToken: string; idToken: string; refreshToken?: string; expiresAt: number };

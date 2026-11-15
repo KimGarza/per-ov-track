@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     await request.makeAuthUrlAsync(discovery);
+    if (__DEV__) console.info('Cognito OAuth callback URL (must match Cognito allowlist):', redirectUri);
     const result = await request.promptAsync(discovery, { preferEphemeralSession: false });
     if (result.type !== 'success' || !result.params.code) {
       if (result.type === 'error') throw new Error(result.params.error_description ?? 'Authentication failed');
