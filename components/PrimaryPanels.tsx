@@ -67,7 +67,7 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
       <ActionButton variant="primary" onPress={onClose}>Done</ActionButton>
     </View> : <View style={{ gap: 14 }}>
       <Text style={g.sectionHeading}>How can we help?</Text>
-      <Text style={g.caption}>Choose a topic and tell us what's on your mind.</Text>
+      <Text style={g.caption}>Choose a topic and tell us what&apos;s on your mind.</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {categories.map(category => <Pressable key={category} accessibilityRole="button" accessibilityState={{ selected: supportCategory === category }} onPress={() => setSupportCategory(category)} style={{ paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: supportCategory === category ? theme.colors.roseWash : theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }}><Text style={g.body}>{category}</Text></Pressable>)}
       </View>
@@ -82,7 +82,7 @@ export function PrimaryPanels({ panel, onClose, onChange }: { panel: PrimaryPane
     <Text style={g.body}>Typical cycle: {insights.cycleLength} days · Period: {insights.periodLength} days</Text>
     <Text style={g.caption}>Your estimates improve as you track.</Text>
     <Text style={g.sectionHeading}>Start fresh</Text>
-    <Text style={g.caption}>Choose which entries to clear. This can't be undone.</Text>
+    <Text style={g.caption}>Choose which entries to clear. This can&apos;t be undone.</Text>
     {currentCycleStart && <View style={{ gap: 4 }}>
       <ActionButton disabled={busy} onPress={() => confirmReset(false, currentCycleStart)}>Reset current cycle</ActionButton>
       <Text style={g.caption}>Clear this cycle. Keep earlier history.</Text>

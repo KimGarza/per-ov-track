@@ -3,8 +3,9 @@ import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 
-if (Platform.OS === 'web') WebBrowser.maybeCompleteAuthSession();
 import { useAuth } from '@/src/providers/AuthProvider';
+
+if (Platform.OS === 'web') WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthCallback() {
   const router = useRouter();

@@ -66,7 +66,7 @@ export async function handler(event) {
     const categories = ['Feedback', 'Technical issue', 'Account issue', 'Billing', 'Other'];
     let input;
     try { input = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'Invalid message' }); }
-    if (!categories.includes(input.category) || typeof input.message !== 'string' || input.message.trim().length < 1 || input.message.length > 4000) return json(400, { error: 'Select a topic and write a message (up to 4000 characters).' });
+    if (!input || typeof input !== 'object' || !categories.includes(input.category) || typeof input.message !== 'string' || input.message.trim().length < 1 || input.message.length > 4000) return json(400, { error: 'Select a topic and write a message (up to 4000 characters).' });
     try {
       const db = await pool();
       const user = await db.query('SELECT email FROM users WHERE cognito_sub=$1', [userId]);
@@ -79,7 +79,7 @@ export async function handler(event) {
           FromEmailAddress: process.env.SUPPORT_SENDER_EMAIL,
           Destination: { ToAddresses: ['support@crimsonrhythm.app'] },
           ReplyToAddresses: email ? [email] : undefined,
-          Content: { Simple: { Subject: { Data: `Crimson Rhythm support: ${input.category}` }, Body: { Text: { Data: `Reference: ${messageId}\\nCategory: ${input.category}\\nReply email: ${email}\\n\\n${input.message.trim()}` } } } },
+          Content: { Simple: { Subject: { Data: `Crimson Rhythm support: ${input.category}` }, Body: { Text: { Data: `Reference: ${messageId}\nCategory: ${input.category}\nReply email: ${email}\n\n${input.message.trim()}` } } } },
         }));
         await db.query("UPDATE support_messages SET status='sent',sent_at=NOW() WHERE id=$1", [messageId]);
       } catch (error) {
