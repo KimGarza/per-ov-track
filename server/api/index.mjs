@@ -2,11 +2,13 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import pg from 'pg';
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { CognitoIdentityProviderClient, AdminDeleteUserCommand, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { applyMigrations } from './migrate.mjs';
 import { handleCycleSync } from './cycle-sync.mjs';
 
 const secrets = new SecretsManagerClient({});
+const emailClient = new SESv2Client({});
 const cognito = new CognitoIdentityProviderClient({});
 let poolPromise;
 const json = (statusCode, body) => ({
@@ -60,6 +62,36 @@ export async function handler(event) {
   }
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
   if (!userId) return json(401, { error: 'Authentication required' });
+  if (method === 'POST' && path.endsWith('/support/messages')) {
+    const categories = ['Feedback', 'Technical issue', 'Account issue', 'Billing', 'Other'];
+    let input;
+    try { input = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'Invalid message' }); }
+    if (!categories.includes(input.category) || typeof input.message !== 'string' || input.message.trim().length < 1 || input.message.length > 4000) return json(400, { error: 'Select a topic and write a message (up to 4000 characters).' });
+    try {
+      const db = await pool();
+      const user = await db.query('SELECT email FROM users WHERE cognito_sub=$1', [userId]);
+      const email = user.rows[0]?.email ?? '';
+      const messageId = randomUUID();
+      // Persist before delivery so support requests are not lost when SES fails.
+      await db.query('INSERT INTO support_messages(id,cognito_sub,category,message,reply_email,status) VALUES($1,$2,$3,$4,$5,$6)', [messageId,userId,input.category,input.message.trim(),email,'pending']);
+      try {
+        await emailClient.send(new SendEmailCommand({
+          FromEmailAddress: process.env.SUPPORT_SENDER_EMAIL,
+          Destination: { ToAddresses: ['support@crimsonrhythm.app'] },
+          ReplyToAddresses: email ? [email] : undefined,
+          Content: { Simple: { Subject: { Data: `Crimson Rhythm support: ${input.category}` }, Body: { Text: { Data: `Reference: ${messageId}\\nCategory: ${input.category}\\nReply email: ${email}\\n\\n${input.message.trim()}` } } } },
+        }));
+        await db.query("UPDATE support_messages SET status='sent',sent_at=NOW() WHERE id=$1", [messageId]);
+      } catch (error) {
+        console.error('Support email delivery pending', { code: error.code, name: error.name });
+        return json(503, { error: 'Message saved but email delivery is pending. Please contact support if urgent.' });
+      }
+      return json(200, { sent: true });
+    } catch (error) {
+      console.error('Support submission failed', { code: error.code, name: error.name });
+      return json(503, { error: 'Unable to send support request' });
+    }
+  }
   if (method === 'POST' && path.endsWith('/users/me/sync')) {
     try {
       const claims = event.requestContext.authorizer.jwt.claims;
