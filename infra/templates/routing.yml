@@ -16,6 +16,7 @@ Resources:
           - GET
           - POST
           - PATCH
+          - DELETE
           - PUT
           - OPTIONS
         AllowHeaders:

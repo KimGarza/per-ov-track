@@ -1,3 +1,4 @@
+import { fetchBillingStatus } from './billing.mjs';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
@@ -62,6 +63,17 @@ export async function handler(event) {
   }
   const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
   if (!userId) return json(401, { error: 'Authentication required' });
+  if (method === 'GET' && path.endsWith('/billing/status')) {
+    try {
+      if (!process.env.REVENUECAT_SECRET_ARN) return json(503, { error: 'Billing verification is not configured' });
+      const secret = await secrets.send(new GetSecretValueCommand({ SecretId: process.env.REVENUECAT_SECRET_ARN }));
+      const apiKey = JSON.parse(secret.SecretString).apiKey;
+      return json(200, await fetchBillingStatus({ userId, apiKey, allowSandbox: process.env.APP_ENV !== 'prod' }));
+    } catch (error) {
+      console.error('Billing verification unavailable', { name: error.name });
+      return json(503, { error: 'Unable to verify subscription. Please try again.' });
+    }
+  }
   if (method === 'POST' && path.endsWith('/support/messages')) {
     const categories = ['Feedback', 'Technical issue', 'Account issue', 'Billing', 'Other'];
     let input;
