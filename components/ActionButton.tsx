@@ -15,8 +15,8 @@ export function ActionButton({ children, onPress, disabled, variant = 'outline',
   const { theme } = useAppTheme();
   const c = theme.colors;
   const gradient = variant === 'primary' || variant === 'danger';
-  const from = variant === 'danger' ? c.todayPeriod : c.roseWash;
-  const to = variant === 'danger' ? c.rose : c.roseSoft;
+  const from = variant === 'danger' ? c.todayPeriod : c.primary;
+  const to = variant === 'danger' ? c.rose : c.primaryEnd;
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[{
     alignSelf: 'flex-start', minHeight: 44, minWidth: 110, paddingHorizontal: 18, paddingVertical: 11,
     borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
@@ -26,6 +26,6 @@ export function ActionButton({ children, onPress, disabled, variant = 'outline',
     {gradient && <View pointerEvents="none" style={{ position: 'absolute', inset: 0, flexDirection: 'row' }}>
       {Array.from({ length: 32 }, (_, i) => <View key={i} style={{ flex: 1, backgroundColor: mixHex(from, to, i / 31) }} />)}
     </View>}
-    <Text style={{ color: variant === 'danger' ? c.white : c.text, fontSize: 14, fontWeight: '600' }}>{children}</Text>
+    <Text style={{ color: gradient ? c.onPrimary : c.text, fontSize: 14, fontWeight: '600' }}>{children}</Text>
   </Pressable>;
 }

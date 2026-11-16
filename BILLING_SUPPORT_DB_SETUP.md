@@ -30,9 +30,13 @@ Official references:
 
 ## Menu behavior
 
-All menu items use the same split layout. Wide screens retain the full menu; phones retain a compact labeled rail beside the selected content. Selecting another item switches content immediately. Selecting the same root item again closes its content. Content X returns to the open menu. Back moves up through nested account pages, then closes content, then closes the menu. The menu X or outside backdrop closes everything. Android's hardware Back uses the same page history. Content scrolls independently, including while the keyboard is shown.
+Menu content uses a shared split layout. Themes is an exception: it opens a small dropdown over the unobscured calendar, stays open while selecting a theme, and previews changes immediately. Wide screens retain the full menu; phones retain a compact labeled rail beside the selected content. Selecting another item switches content immediately. Selecting the same root item again closes its content. Content X returns to the open menu. Back moves up through nested account pages, then closes content, then closes the menu. The menu X or outside backdrop closes everything. Android's hardware Back uses the same page history. Content scrolls independently, including while the keyboard is shown.
 
 My Account contains separate Privacy & Data and Account options links. Account options contains Change password and Delete account. `/account` redirects into this same menu rather than opening a separate full-screen account experience. Help & Support uses one collapsed topic dropdown with Feedback, Technical issue, Account issue, Billing, and Other. The thank-you state appears after the backend accepts delivery.
+
+## Clear cycle data deployment
+
+Deploy migration `008_bounded_cycle_reset.sql` with the API changes. Current-cycle and selected-cycle ranges end on the device's today and preserve future entries; All cycle data clears every date and cycle setup. Range deletion includes check-ins, journal pages, and reflections as disclosed in the confirmation. The sync response now includes `resetTo` so updated clients preserve dates after the range. Older app builds do not understand this bound; rebuild/update clients before using bounded reset across multiple devices. No AWS deployment was performed as part of this change.
 
 ## Support delivery
 

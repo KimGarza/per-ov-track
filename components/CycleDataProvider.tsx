@@ -1,3 +1,4 @@
+import { clearDataRange } from '@/utils/clearCycleData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
@@ -189,27 +190,26 @@ function useCycleState() {
     }, 60_000);
     return () => { subscription.remove(); clearInterval(interval); };
   }, [ready, accountId, syncNow]);
-  const resetCycleData = useCallback(async (from: string | null) => {
+  const resetCycleData = useCallback(async (from: string | null, through = dateKey(new Date())) => {
     if (!ready || !session || !api || !accountStorageKey || !accountOnboardingKey) throw new Error('Account connection is required to reset data.');
     if (from && (dateKey(parseDate(from)) > dateKey(new Date()))) throw new Error('Choose today or an earlier date.');
     // Serialize with outstanding writes so an older upload cannot restore deleted entries.
-    await queue.current;
-    // Delete remotely before touching local records; never re-upload deleted days.
-    const response = await fetch(`${api}/cycle/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(from ? { scope: 'from', from } : { scope: 'all' }) });
-    if (!response.ok) throw new Error('Could not reset cloud data. Nothing was deleted locally.');
-    const responseBody = await response.json();
-    await saveSyncState(accountId!, { generation: responseBody.generation, revision: responseBody.revision, pending: [], dirty: false });
-    const filter = <T,>(values?: Record<string, T>) => Object.fromEntries(Object.entries(values ?? {}).filter(([day]) => from && day < from)) as Record<string, T>;
-    const next: CycleData = from ? {
-      ...current.current, days: filter(current.current.days), journal: filter(current.current.journal),
-      observations: filter(current.current.observations), pendingDays: filter(current.current.pendingDays),
-      diary: filter(current.current.diary), diaryStyles: filter(current.current.diaryStyles),
-      reflections: filter(current.current.reflections),
-    } : emptyCycleData();
-    await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
-    if (!from) { await AsyncStorage.removeItem(accountOnboardingKey); await AsyncStorage.removeItem(`${accountOnboardingKey}:pending`); setOnboarding(defaultOnboarding()); }
-    current.current = next;
-    setData(next);
+    const operation = queue.current.then(async () => {
+      // Delete remotely before touching local records; never re-upload deleted days.
+      const response = await fetch(`${api}/cycle/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.idToken}` }, body: JSON.stringify(from ? { scope: 'from', from, through } : { scope: 'all' }) });
+      if (!response.ok) throw new Error('Could not reset cloud data. Nothing was deleted locally.');
+      const responseBody = await response.json();
+      const previousSync = await loadSyncState(accountId!);
+      const pending = previousSync.pending.filter(item => from && (item.entry.date < from || item.entry.date > through)).map(item => ({ ...item, generation: responseBody.generation, baseRevision: responseBody.revision }));
+      await saveSyncState(accountId!, { generation: responseBody.generation, revision: responseBody.revision, pending, dirty: false });
+      const next = clearDataRange(current.current, from, through);
+      await AsyncStorage.setItem(accountStorageKey, JSON.stringify(next));
+      if (!from) { await AsyncStorage.removeItem(accountOnboardingKey); await AsyncStorage.removeItem(`${accountOnboardingKey}:pending`); setOnboarding(defaultOnboarding()); }
+      current.current = next;
+      setData(next);
+    });
+    queue.current = operation.catch(() => {});
+    return operation;
   }, [ready, session, api, accountId, accountStorageKey, accountOnboardingKey]);
   return { data, onboarding, syncStatus, syncNow, resetCycleData, saveOnboarding, saveDiary, saveReflection, ready, error, retry: load, saveRange, saveJournal, saveDay };
 }

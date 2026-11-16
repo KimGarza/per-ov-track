@@ -1,3 +1,4 @@
+import { parseResetRange } from './reset-range.mjs';
 import { fetchBillingStatus } from './billing.mjs';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -205,9 +206,9 @@ export async function handler(event) {
   if (method === 'POST' && path.endsWith('/cycle/reset')) {
     try {
       const input = JSON.parse(event.body || '{}');
-      const scope = input.scope;
-      const from = input.from;
-      if (!['all', 'from'].includes(scope) || (scope === 'from' && (typeof from !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(from) || Number.isNaN(Date.parse(from)) || from > new Date().toISOString().slice(0,10)))) return json(400, { error: 'Invalid reset range' });
+      const range = parseResetRange(input);
+      if (!range) return json(400, { error: 'Invalid reset range' });
+      const { scope, from, through } = range;
       const db = await pool();
       const client = await db.connect();
       try {
@@ -218,12 +219,12 @@ export async function handler(event) {
         await client.query('INSERT INTO cycle_sync_accounts(user_id) VALUES($1) ON CONFLICT DO NOTHING', [uid]);
         const state = await client.query('SELECT revision,generation FROM cycle_sync_accounts WHERE user_id=$1 FOR UPDATE', [uid]);
         const revision = Number(state.rows[0].revision) + 1;
-        await client.query('UPDATE cycle_sync_accounts SET revision=$2,generation=generation+1,reset_from=$3 WHERE user_id=$1', [uid,revision,scope === 'all' ? null : from]);
+        await client.query('UPDATE cycle_sync_accounts SET revision=$2,generation=generation+1,reset_from=$3,reset_to=$4 WHERE user_id=$1', [uid,revision,from,through]);
         await client.query(
           scope === 'all'
             ? 'UPDATE cycle_day_entries SET kind=NULL,flow=NULL,cervical_mucus=NULL,mood=NULL,symptoms=NULL,notes=NULL,diary=NULL,diary_style=NULL,reflection=NULL,deleted_at=NOW(),sync_revision=$2 WHERE user_id=$1'
-            : 'UPDATE cycle_day_entries SET kind=NULL,flow=NULL,cervical_mucus=NULL,mood=NULL,symptoms=NULL,notes=NULL,diary=NULL,diary_style=NULL,reflection=NULL,deleted_at=NOW(),sync_revision=$3 WHERE user_id=$1 AND entry_date >= $2::date',
-          scope === 'all' ? [uid,revision] : [uid,from,revision],
+            : 'UPDATE cycle_day_entries SET kind=NULL,flow=NULL,cervical_mucus=NULL,mood=NULL,symptoms=NULL,notes=NULL,diary=NULL,diary_style=NULL,reflection=NULL,deleted_at=NOW(),sync_revision=$4 WHERE user_id=$1 AND entry_date BETWEEN $2::date AND $3::date',
+          scope === 'all' ? [uid,revision] : [uid,from,through,revision],
         );
         if (scope === 'all') {
           await client.query('DELETE FROM cycle_profiles WHERE user_id = (SELECT id FROM users WHERE cognito_sub = $1)', [userId]);

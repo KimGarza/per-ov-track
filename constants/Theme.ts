@@ -9,9 +9,11 @@ export const designTokens = {
   typography: { label: 14, caption: 12, sectionHeading: 25 },
   opacity: { disabled: 0.45, predictionBlend: 0.48 },
   layout: { maxWidth: 720, gutter: 16, touchTarget: 44, tabBarHeight: 68 },
+  forms: { choiceMinHeight: 104, flowerSize: 52, noteMinHeight: 100, tagFontSize: 13 },
   calendar: { minRowHeight: 35, maxRowHeight: 80, defaultRowHeight: 60, dayMaxWidth: 56, dayFontSize: 21, compactDayFontSize: 17, monthFontSize: 34, compactMonthFontSize: 28, chromeHeight: 180, headerHeight: 52, checkinHeight: 120 },
 };
 export type ThemeColors = {
+  primary: string; primaryEnd: string; onPrimary: string;
   background: string; surface: string; calendarSurface: string; text: string; muted: string; placeholder: string;
   calendarPeriod: string; calendarFertile: string; calendarText: string; calendarFollicular: string; calendarLuteal: string;
   today: string; todayPeriod: string; todayFertile: string; overlay: string;
@@ -28,6 +30,7 @@ function defineTheme(colors: ThemeColors, statusBar: Theme['statusBar'], decorat
 }
 export const themes = {
   grace: defineTheme({
+    primary: '#842438', primaryEnd: '#9D3348', onPrimary: '#FFF7F0',
     background: '#F7DDD3', surface: '#FFF7F0', calendarSurface: '#FFF9F3', text: '#2d0b0b', muted: '#351310', placeholder: '#A4867B',
     calendarFollicular: '#F5ECE7', calendarLuteal: '#E6D5C7',
     calendarPeriod: 'rgb(240, 108, 115)', calendarFertile: '#a9d2a0', calendarText: '#2d0b0b', today: '#9A763A', todayPeriod: '#2d0b0b', todayFertile: '#358042', overlay: '#422E2866',
@@ -38,6 +41,7 @@ export const themes = {
     botanicalBorder: '#BAA18A', botanicalCenter: '#BC8C69', frameGold: '#C49B65', cardHalo: '#E9BDB0', backgroundLight: '#FCE9DF', backgroundDeep: '#F4D0C5',
   }, 'dark', 'botanical', { ...designTokens.fonts, journal: 'CormorantGaramond' }),
   petal: defineTheme({
+    primary: '#8B3543', primaryEnd: '#A0445A', onPrimary: '#FFF7F0',
     background: '#FAEDF1', surface: '#FFF8FA', calendarSurface: '#FFF5F8', text: '#341610', muted: '#5b3128', placeholder: '#997F79',
     calendarFollicular: '#F5ECE7', calendarLuteal: '#E7D6CC',
     calendarPeriod: '#eab7b7', calendarFertile: '#D9DEC2', calendarText: '#36201B', today: '#946723', todayPeriod: '#8B3543', todayFertile: '#43562D', overlay: '#36201B66',
@@ -48,6 +52,7 @@ export const themes = {
     botanicalBorder: '#C6A68B', botanicalCenter: '#AE8B51', frameGold: '#BCA18A', cardHalo: '#EED7DF', backgroundLight: '#FFF7FA', backgroundDeep: '#F5E6EF',
   }, 'dark', 'botanical', { heading: 'CormorantGaramond', body: designTokens.fonts.body, mono: designTokens.fonts.mono, journal: 'CormorantGaramond' }),
   burgundy: defineTheme({
+    primary: '#842438', primaryEnd: '#9F2838', onPrimary: '#FFF7F0',
     background: '#3D1018', surface: '#F8EBD5', calendarSurface: '#FFF0DA', text: '#35171C', muted: '#593B30', placeholder: '#947D70',
     calendarFollicular: '#F5E7D4', calendarLuteal: '#E2CCB0',
     calendarPeriod: '#DCA0A6', calendarFertile: '#C3CCAC', calendarText: '#35171C', today: '#A57723', todayPeriod: '#842438', todayFertile: '#3D512B', overlay: '#35171C80',
@@ -58,6 +63,7 @@ export const themes = {
     botanicalBorder: '#DDC8AC', botanicalCenter: '#EBC677', frameGold: '#BA9B70', cardHalo: '#70414B', backgroundLight: '#51202B', backgroundDeep: '#3D1018',
   }, 'light', 'none', { heading: 'CormorantGaramond', body: designTokens.fonts.body, mono: designTokens.fonts.mono, journal: 'SpaceMono' }),
   sanctuary: defineTheme({
+    primary: '#66384E', primaryEnd: '#82506B', onPrimary: '#FFF7F0',
     background: '#151019', surface: '#EAE2DC', calendarSurface: '#F5EFEB', text: '#291924', muted: '#57404F', placeholder: '#95828D',
     calendarFollicular: '#ECE5E0', calendarLuteal: '#D7C9C0',
     calendarPeriod: '#CAA0B0', calendarFertile: '#C5CABA', calendarText: '#291924',
@@ -88,11 +94,30 @@ export const createGlobalStyles = (theme: Theme) => StyleSheet.create({
   calendarActionText: { color: theme.colors.onCycleAction, fontFamily: theme.fonts.body, textAlign: 'center', fontSize: theme.typography.caption, fontWeight: '600' },
   heading: { fontFamily: theme.fonts.heading, color: theme.colors.text, fontSize: 34 },
   body: { fontFamily: theme.fonts.body, color: theme.colors.text, fontSize: 16, lineHeight: 24 },
-  button: { backgroundColor: theme.colors.rose, borderRadius: theme.radius.pill, paddingVertical: 17, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
-  buttonText: { color: theme.colors.white, fontSize: 17, fontFamily: theme.fonts.body },
+  button: { backgroundColor: theme.colors.primary, borderRadius: theme.radius.pill, paddingVertical: 17, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
+  buttonText: { color: theme.colors.onPrimary, fontSize: 17, fontFamily: theme.fonts.body },
   input: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.sm, padding: theme.spacing.md, minHeight: theme.layout.touchTarget, backgroundColor: theme.colors.calendarSurface, color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 16 },
   disabled: { opacity: theme.opacity.disabled },
   outlineButton: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.sm, minHeight: theme.layout.touchTarget, alignItems: 'center', justifyContent: 'center', padding: theme.spacing.sm },
+  formSection: { gap: theme.spacing.sm },
+  sectionRule: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
+  rule: { flex: 1, height: 1, backgroundColor: theme.colors.olive, opacity: 0.6 },
+  encouragement: { backgroundColor: theme.colors.roseWash, borderRadius: theme.radius.sm, padding: theme.spacing.md, gap: theme.spacing.sm },
+  eyebrow: { color: theme.colors.olive, fontFamily: theme.fonts.body, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
+  dateHeading: { fontFamily: theme.fonts.heading, color: theme.colors.text, fontSize: 24, textAlign: 'center', flex: 1 },
+  choiceTile: { flex: 1, minWidth: 80, minHeight: theme.forms.choiceMinHeight, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.sm, backgroundColor: theme.colors.surface, padding: theme.spacing.sm, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm },
+  choiceTileSelected: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  choiceTileLabel: { fontFamily: theme.fonts.heading, fontSize: 22, color: theme.colors.text, textAlign: 'center' },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+  tag: { minHeight: theme.layout.touchTarget, borderRadius: theme.radius.pill, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
+  tagSelected: { backgroundColor: theme.colors.roseWash, borderColor: theme.colors.primary },
+  tagText: { color: theme.colors.text, fontSize: theme.forms.tagFontSize, fontFamily: theme.fonts.body },
+  moodChoice: { alignItems: 'center', justifyContent: 'center', minWidth: 55, minHeight: 82, gap: theme.spacing.xs, paddingVertical: theme.spacing.xs },
+  moodLabel: { borderRadius: theme.radius.pill, paddingHorizontal: 6, paddingVertical: 2 },
+  noteInput: { minHeight: theme.forms.noteMinHeight, textAlignVertical: 'top', fontFamily: theme.fonts.heading, fontSize: 20 },
+  dropdown: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.sm, backgroundColor: theme.colors.surface, overflow: 'hidden' },
+  dropdownTrigger: { minHeight: 48, padding: theme.spacing.md, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
+  dropdownOption: { padding: theme.spacing.md, minHeight: theme.layout.touchTarget },
   authButton: { minHeight: theme.auth.buttonHeight, borderRadius: theme.auth.buttonRadius, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, justifyContent: 'center', paddingHorizontal: theme.spacing.md },
   authButtonPrimary: { backgroundColor: theme.colors.rose, borderColor: theme.colors.rose },
   authButtonText: { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 15, fontWeight: '600', textAlign: 'center' },
