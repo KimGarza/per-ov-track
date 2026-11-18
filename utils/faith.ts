@@ -1,6 +1,7 @@
 import catalog from '@/data/verses.json';
+import verseSchedule from '@/data/daily-verse-schedule.json';
 import topicData from '@/data/guidance.json';
-import { dateKey, daysBetween, parseDate } from './cycle';
+import { dateKey, parseDate } from './cycle';
 
 export type Verse = { id: string; reference: string; text: string; translation: string };
 export type GuidanceCard = { verse: Verse; explanation: string; goal: string };
@@ -30,9 +31,12 @@ export function holidayFor(day: string): ChristianDay | undefined {
 export function dailyVerse(day: string): Verse {
   const holiday = holidayFor(day);
   if (holiday) return verses[holiday.verseId];
-  const ids = Object.keys(verses);
-  const index = ((daysBetween('2026-01-01', day) % ids.length) + ids.length) % ids.length;
-  return verses[ids[index]];
+  const date = parseDate(day);
+  const startOfYear = Date.UTC(date.getFullYear(), 0, 1);
+  const currentDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayOfYear = Math.floor((currentDay - startOfYear) / 86400000);
+  const verseId = verseSchedule.days[dayOfYear];
+  return verses[verseId] ?? verses['psalm-46-1'];
 }
 export function parseGuidanceResponse(value: unknown): GuidanceCard[] {
   if (!value || typeof value !== 'object' || !('cards' in value) || !Array.isArray(value.cards) || value.cards.length !== 5) throw new Error('Invalid guidance');
